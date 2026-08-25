@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
   experimental: {
     workerThreads: false,
     cpus: 1
+  },
+  env: {
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL || "https://fake-url-for-build.com",
   }
 };
 
