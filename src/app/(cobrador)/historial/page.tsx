@@ -15,7 +15,7 @@ export default async function HistorialPage() {
   const prestamos = await prisma.prestamo.findMany({
     where: { cobrador_id: cobrador.id },
     include: { cliente: true },
-    orderBy: { fecha_creacion: "desc" }
+    orderBy: { fecha_entrega: "desc" }
   });
 
   return (
