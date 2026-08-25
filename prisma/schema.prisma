@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id            String   @id @default(uuid())
+  nombre        String
+  email         String   @unique
+  password_hash String
+  rol           String   @default("COBRADOR")
+  estado        String   @default("ACTIVO")
+  fecha_alta    DateTime @default(now())
+
+  clientesAsignados Cliente[]
+  prestamos         Prestamo[]
+  rendiciones       CajaRendicion[]
+  auditLogs         AuditLog[]
+}
+
+model Cliente {
+  id                 String   @id @default(uuid())
+  nombre_apellido    String
+  dni                String   @unique
+  direccion_personal String?
+  direccion_negocio  String?
+  celular            String?
+  
+  cobrador_asignado_id String?
+  cobrador           Usuario? @relation(fields: [cobrador_asignado_id], references: [id])
+
+  prestamos          Prestamo[]
+}
+
+model Prestamo {
+  id                   String   @id @default(uuid())
+  codigo               String   @unique
+  cliente_id           String
+  cobrador_id          String
+  monto_solicitado     Float
+  porcentaje_interes   Float
+  cantidad_cuotas      Int
+  modalidad            String
+  fecha_entrega        DateTime
+  fecha_primer_cobro   DateTime
+  tipo                 String   @default("NUEVO")
+  estado               String   @default("ACTIVO")
+  monto_total_a_devolver Float
+  valor_cuota          Float
+
+  cliente  Cliente @relation(fields: [cliente_id], references: [id])
+  cobrador Usuario @relation(fields: [cobrador_id], references: [id])
+  
+  cuotas   Cuota[]
+}
+
+model Cuota {
+  id                   String   @id @default(uuid())
+  prestamo_id          String
+  numero_cuota         Int
+  fecha_vencimiento    DateTime
+  valor                Float
+  monto_pagado         Float    @default(0)
+  medio_pago           String?
+  estado               String   @default("PENDIENTE")
+  fecha_pago           DateTime?
+  dias_mora            Int      @default(0)
+  interes_mora_aplicado Float   @default(0)
+
+  prestamo Prestamo @relation(fields: [prestamo_id], references: [id])
+}
+
+model CajaRendicion {
+  id                   String   @id @default(uuid())
+  cobrador_id          String
+  fecha                DateTime
+  monto_efectivo       Float    @default(0)
+  monto_transferencias Float    @default(0)
+  estado               String   @default("ABIERTA")
+
+  cobrador Usuario @relation(fields: [cobrador_id], references: [id])
+}
+
+model AuditLog {
+  id                 String   @id @default(uuid())
+  usuario_id         String
+  accion             String
+  entidad_afectada   String
+  valores_anteriores String?
+  valores_nuevos     String?
+  fecha_hora         DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+}

@@ -1,0 +1,60 @@
+"use server";
+
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+
+export async function getCobrosHoy(cobradorId: string) {
+  // To handle timezone and "today" boundary safely in simple apps
+  const hoy = new Date();
+  hoy.setHours(23, 59, 59, 999);
+
+  return prisma.cuota.findMany({
+    where: {
+      estado: { in: ['PENDIENTE', 'MORA', 'PARCIAL'] },
+      fecha_vencimiento: { lte: hoy },
+      prestamo: {
+        cobrador_id: cobradorId
+      }
+    },
+    include: {
+      prestamo: {
+        include: {
+          cliente: true
+        }
+      }
+    },
+    orderBy: {
+      fecha_vencimiento: 'asc'
+    }
+  });
+}
+
+export async function cobrarCuota(cuotaId: string, montoPagado: number) {
+  try {
+    const currentCuota = await prisma.cuota.findUnique({
+      where: { id: cuotaId }
+    });
+    
+    if (!currentCuota) throw new Error("Cuota no encontrada");
+    
+    const newMontoPagado = currentCuota.monto_pagado + montoPagado;
+    const isCompleted = newMontoPagado >= currentCuota.valor;
+    
+    await prisma.cuota.update({
+      where: { id: cuotaId },
+      data: {
+        monto_pagado: newMontoPagado,
+        estado: isCompleted ? "PAGADA" : "PARCIAL",
+        fecha_pago: new Date()
+      }
+    });
+
+    revalidatePath("/(cobrador)/mis-rutas");
+    revalidatePath("/(cobrador)/resumen");
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Error cobrando cuota:", error);
+    return { success: false, error: "Error interno al cobrar" };
+  }
+}
