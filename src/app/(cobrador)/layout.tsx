@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import Link from "next/link";
-import { Home, PlusCircle, Map, LogOut, Wallet, History } from "lucide-react";
+import { Home, PlusCircle, Map, Wallet, History } from "lucide-react";
+import { LogoutButton } from "@/components/LogoutButton";
 
 export default function CobradorLayout({ children }: { children: ReactNode }) {
   return (
@@ -11,9 +12,7 @@ export default function CobradorLayout({ children }: { children: ReactNode }) {
           <Wallet size={24} className="opacity-90" />
           <h1 className="font-bold text-xl tracking-tight">Ruta RYB</h1>
         </div>
-        <button className="p-2 bg-emerald-700/60 rounded-full hover:bg-emerald-800/80 transition-colors">
-          <LogOut size={18} />
-        </button>
+        <LogoutButton />
       </header>
 
       {/* Main Scrollable Content */}
