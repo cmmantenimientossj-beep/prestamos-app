@@ -19,8 +19,7 @@ export async function createCliente(data: {
       },
     });
 
-    revalidatePath("/admin/clientes");
-    revalidatePath("/(cobrador)/nuevo-prestamo");
+    revalidatePath("/", "layout");
     return { success: true, cliente: nuevoCliente };
   } catch (error: any) {
     console.error("Error creating client:", error);
@@ -50,7 +49,7 @@ export async function deleteCliente(id: string) {
       where: { id },
     });
 
-    revalidatePath("/admin/clientes");
+    revalidatePath("/", "layout");
     return { success: true };
   } catch (error) {
     console.error("Error deleting client:", error);

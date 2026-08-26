@@ -71,8 +71,7 @@ export async function createPrestamo(data: CreatePrestamoInput) {
       return nuevoPrestamo;
     });
 
-    revalidatePath("/(cobrador)/nuevo-prestamo");
-    revalidatePath("/(cobrador)/resumen");
+    revalidatePath("/", "layout");
     
     return { success: true, prestamo };
   } catch (error: any) {

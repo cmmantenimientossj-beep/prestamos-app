@@ -49,8 +49,7 @@ export async function cobrarCuota(cuotaId: string, montoPagado: number) {
       }
     });
 
-    revalidatePath("/(cobrador)/mis-rutas");
-    revalidatePath("/(cobrador)/resumen");
+    revalidatePath("/", "layout");
     
     return { success: true };
   } catch (error) {
@@ -66,7 +65,7 @@ export async function reprogramarCuota(cuotaId: string, nuevaFecha: Date) {
       data: { fecha_vencimiento: nuevaFecha }
     });
     
-    revalidatePath("/(cobrador)/mis-rutas");
+    revalidatePath("/", "layout");
     
     return { success: true };
   } catch (error) {
