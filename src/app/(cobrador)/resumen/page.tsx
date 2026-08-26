@@ -1,31 +1,111 @@
 import { CheckCircle2, Banknote, Landmark, Navigation } from "lucide-react";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 
-export default function ResumenCajaPage() {
+export default async function ResumenCajaPage() {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    redirect("/login");
+  }
+  
+  const cobradorId = (session.user as any).id;
+
+  // Fechas del día actual (00:00 a 23:59)
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfDay = new Date(startOfDay);
+  endOfDay.setDate(endOfDay.getDate() + 1);
+
+  // 1. Cuotas Cobradas Hoy
+  const cuotasPagadasHoy = await prisma.cuota.findMany({
+    where: {
+      prestamo: {
+        cobrador_id: cobradorId
+      },
+      estado: { in: ['PAGADA', 'PARCIAL'] },
+      fecha_pago: {
+        gte: startOfDay,
+        lt: endOfDay
+      }
+    }
+  });
+
+  let totalEfectivo = 0;
+  let totalTransferencia = 0;
+  
+  cuotasPagadasHoy.forEach(c => {
+    // Si se pagó por transferencia o MP
+    if (c.medio_pago === 'TRANSFERENCIA' || c.medio_pago === 'MERCADOPAGO') {
+      totalTransferencia += c.monto_pagado;
+    } else {
+      totalEfectivo += c.monto_pagado; // Por defecto o Efectivo
+    }
+  });
+
+  const totalARendir = totalEfectivo + totalTransferencia;
+  const cantCuotasCobradas = cuotasPagadasHoy.length;
+
+  // 2. Cuotas Pendientes de Visita (Hoy o Vencidas)
+  const cuotasPendientes = await prisma.cuota.count({
+    where: {
+      prestamo: {
+        cobrador_id: cobradorId
+      },
+      estado: { in: ['PENDIENTE', 'MORA', 'PARCIAL'] },
+      fecha_vencimiento: {
+        lt: endOfDay
+      }
+    }
+  });
+
+  // 3. Préstamos Emitidos Hoy (Dinero que salió)
+  const prestamosEmitidos = await prisma.prestamo.aggregate({
+    where: {
+      cobrador_id: cobradorId,
+      fecha_entrega: {
+        gte: startOfDay,
+        lt: endOfDay
+      }
+    },
+    _sum: {
+      monto_solicitado: true
+    }
+  });
+
+  const totalSalida = prestamosEmitidos._sum.monto_solicitado || 0;
+
+  // Formateador de moneda
+  const formatMoney = (amount: number) => {
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(amount);
+  };
+
   return (
     <div className="animate-in fade-in zoom-in-95 duration-300">
       <div className="mb-6">
         <h2 className="text-2xl font-black text-slate-800 tracking-tight">Rendición de Caja</h2>
-        <p className="text-slate-500 text-sm mt-0.5">Estado actual de la caja diaria</p>
+        <p className="text-slate-500 text-sm mt-0.5">Estado actual de tu caja diaria</p>
       </div>
 
       {/* Main Totals */}
       <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-[2rem] text-white shadow-xl shadow-slate-900/20 mb-6 relative overflow-hidden">
         <div className="absolute -right-8 -top-8 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl"></div>
         <p className="text-sm text-slate-400 font-bold uppercase tracking-wider mb-1">Total a Rendir Hoy</p>
-        <h2 className="text-5xl font-black mb-6 tracking-tight">$85,400</h2>
+        <h2 className="text-5xl font-black mb-6 tracking-tight">{formatMoney(totalARendir)}</h2>
         
         <div className="grid grid-cols-2 gap-4 border-t border-slate-700/80 pt-5">
           <div>
             <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mb-1">
               <Banknote size={14} className="text-emerald-400" /> Efectivo
             </p>
-            <p className="text-xl font-bold text-white">$60,400</p>
+            <p className="text-xl font-bold text-white">{formatMoney(totalEfectivo)}</p>
           </div>
           <div>
             <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mb-1">
               <Landmark size={14} className="text-cyan-400" /> Transf.
             </p>
-            <p className="text-xl font-bold text-white">$25,000</p>
+            <p className="text-xl font-bold text-white">{formatMoney(totalTransferencia)}</p>
           </div>
         </div>
       </div>
@@ -35,7 +115,7 @@ export default function ResumenCajaPage() {
           <div className="w-10 h-10 bg-emerald-200/50 rounded-full flex items-center justify-center text-emerald-600 mb-3">
              <CheckCircle2 size={20} strokeWidth={2.5} />
           </div>
-          <p className="text-sm font-black text-slate-700">42 Cuotas</p>
+          <p className="text-sm font-black text-slate-700">{cantCuotasCobradas} Cuota(s)</p>
           <p className="text-xs text-slate-500 font-medium mt-0.5">Cobradas hoy</p>
         </div>
         
@@ -43,7 +123,7 @@ export default function ResumenCajaPage() {
           <div className="w-10 h-10 bg-amber-200/50 rounded-full flex items-center justify-center text-amber-600 mb-3">
              <Navigation size={20} strokeWidth={2.5} className="rotate-45" />
           </div>
-          <p className="text-sm font-black text-slate-700">8 Pendientes</p>
+          <p className="text-sm font-black text-slate-700">{cuotasPendientes} Pendientes</p>
           <p className="text-xs text-slate-500 font-medium mt-0.5">De visita</p>
         </div>
       </div>
@@ -53,11 +133,15 @@ export default function ResumenCajaPage() {
         <h3 className="font-black text-slate-800 mb-4">Cierre de Jornada</h3>
         
         <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl mb-4 border border-slate-100">
-          <span className="text-sm font-bold text-slate-600">Préstamos Emitidos</span>
-          <span className="font-black text-red-500 bg-red-50 px-2 py-0.5 rounded-md">-$20,000</span>
+          <span className="text-sm font-bold text-slate-600">Préstamos Emitidos Hoy</span>
+          <span className="font-black text-red-500 bg-red-50 px-2 py-0.5 rounded-md">
+            -{formatMoney(totalSalida)}
+          </span>
         </div>
 
-        <button className="w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-slate-900/20 active:scale-95 transition-all flex justify-center items-center gap-2">
+        <button 
+          className="w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-slate-900/20 active:scale-95 transition-all flex justify-center items-center gap-2"
+        >
           Enviar Rendición
         </button>
         <p className="text-center text-xs text-slate-400 font-medium mt-4 px-4 leading-relaxed">
