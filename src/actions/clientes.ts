@@ -30,7 +30,7 @@ export async function createCliente(data: {
     if (error.code === 'P2002') {
        return { success: false, error: "El DNI ingresado ya está registrado." };
     }
-    return { success: false, error: "Error interno al crear cliente." };
+    return { success: false, error: "Error interno: " + error.message };
   }
 }
 
