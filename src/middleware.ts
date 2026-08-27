@@ -12,7 +12,7 @@ export default withAuth(
     if (isRoot) {
       if (isAuth) {
         if (token.role === "ADMIN") {
-          return NextResponse.redirect(new URL('/admin/dashboard', req.url));
+          return NextResponse.redirect(new URL('/admin/resumen', req.url));
         }
         return NextResponse.redirect(new URL('/mis-rutas', req.url));
       }
@@ -23,7 +23,7 @@ export default withAuth(
     if (isAuthPage) {
       if (isAuth) {
         if (token.role === "ADMIN") {
-          return NextResponse.redirect(new URL('/admin/dashboard', req.url));
+          return NextResponse.redirect(new URL('/admin/resumen', req.url));
         }
         return NextResponse.redirect(new URL('/mis-rutas', req.url));
       }
