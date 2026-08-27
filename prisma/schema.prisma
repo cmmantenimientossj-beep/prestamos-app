@@ -8,13 +8,18 @@ datasource db {
 }
 
 model Usuario {
-  id            String   @id @default(uuid())
-  nombre        String
-  email         String   @unique
-  password_hash String
-  rol           String   @default("COBRADOR")
-  estado        String   @default("ACTIVO")
-  fecha_alta    DateTime @default(now())
+  id                  String   @id @default(uuid())
+  nombre              String
+  email               String   @unique
+  password_hash       String
+  rol                 String   @default("COBRADOR")
+  estado              String   @default("ACTIVO")
+  fecha_alta          DateTime @default(now())
+  
+  dni                 String?
+  direccion           String?
+  celular             String?
+  porcentaje_comision Float?   @default(0)
 
   clientesAsignados Cliente[]
   prestamos         Prestamo[]
@@ -28,6 +33,7 @@ model Cliente {
   dni                String   @unique
   direccion_personal String?
   direccion_negocio  String?
+  nombre_negocio     String?
   celular            String?
   
   cobrador_asignado_id String?
