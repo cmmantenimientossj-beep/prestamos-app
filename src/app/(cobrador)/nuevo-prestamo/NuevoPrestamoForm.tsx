@@ -113,7 +113,7 @@ export default function NuevoPrestamoForm({ clientes, cobradorId }: FormProps) {
       if (res.success) {
         setSuccessMsg("¡Préstamo otorgado correctamente!");
         setTimeout(() => {
-           router.push("/(cobrador)/resumen");
+           router.push("/resumen");
         }, 1500);
       } else {
         setErrorMsg(res.error || "Error al crear préstamo");
