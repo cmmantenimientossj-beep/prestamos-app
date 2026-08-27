@@ -4,9 +4,10 @@ import { ArrowLeft, MapPin, Phone, Briefcase, Activity, Target } from "lucide-re
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-export default async function CobradorHistoryPage({ params }: { params: { id: string } }) {
+export default async function CobradorHistoryPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const cobrador = await prisma.usuario.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       clientesAsignados: true,
       rendiciones: {

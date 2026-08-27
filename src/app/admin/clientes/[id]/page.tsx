@@ -4,9 +4,10 @@ import { ArrowLeft, User, Phone, MapPin, Store, CheckCircle, AlertTriangle, Cloc
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-export default async function ClientHistoryPage({ params }: { params: { id: string } }) {
+export default async function ClientHistoryPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const cliente = await prisma.cliente.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       prestamos: {
         orderBy: { fecha_entrega: 'desc' },
