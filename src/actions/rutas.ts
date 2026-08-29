@@ -29,7 +29,7 @@ export async function getCobrosHoy(cobradorId: string) {
   });
 }
 
-export async function cobrarCuota(cuotaId: string, montoPagado: number) {
+export async function cobrarCuota(cuotaId: string, montoPagado: number, medioPago: string = "EFECTIVO") {
   try {
     const currentCuota = await prisma.cuota.findUnique({
       where: { id: cuotaId }
@@ -45,6 +45,7 @@ export async function cobrarCuota(cuotaId: string, montoPagado: number) {
       data: {
         monto_pagado: newMontoPagado,
         estado: isCompleted ? "PAGADA" : "PARCIAL",
+        medio_pago: medioPago,
         fecha_pago: new Date()
       }
     });

@@ -111,7 +111,7 @@ export default function NuevoPrestamoForm({ clientes, cobradorId }: FormProps) {
       });
 
       if (res.success) {
-        setSuccessMsg("¡Préstamo otorgado correctamente!");
+        setSuccessMsg("¡Solicitud enviada exitosamente al Admin!");
         setTimeout(() => {
            router.push("/resumen");
         }, 1500);
@@ -286,7 +286,7 @@ export default function NuevoPrestamoForm({ clientes, cobradorId }: FormProps) {
         disabled={isPending || !clienteId}
         className="w-full bg-emerald-500 disabled:opacity-50 text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-emerald-500/40 active:scale-95 transition-transform hover:bg-emerald-400"
       >
-        {isPending ? "Procesando..." : "Aprobar y Emitir Crédito"}
+        {isPending ? "Procesando..." : "Solicitar Préstamo al Admin"}
       </button>
     </form>
   )

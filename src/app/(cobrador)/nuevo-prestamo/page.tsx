@@ -25,8 +25,8 @@ export default async function NuevoPrestamoPage() {
   return (
     <div className="animate-in fade-in zoom-in-95 duration-300">
       <div className="mb-6">
-        <h2 className="text-2xl font-black text-slate-800 tracking-tight">Nuevo Crédito</h2>
-        <p className="text-slate-500 text-sm mt-0.5">Otorgar préstamo rápido en calle</p>
+        <h2 className="text-2xl font-black text-slate-800 tracking-tight">Solicitar Préstamo</h2>
+        <p className="text-slate-500 text-sm mt-0.5">Enviar una solicitud de crédito al administrador</p>
       </div>
 
       <NuevoPrestamoForm clientes={clientes} cobradorId={cobrador.id} />

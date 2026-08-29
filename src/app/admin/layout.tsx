@@ -3,7 +3,7 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, UserCog, DollarSign, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, UserCog, DollarSign, LogOut, ClipboardList } from "lucide-react";
 import { signOut } from "next-auth/react";
 import LoanSimulator from "@/components/LoanSimulator";
 
@@ -11,6 +11,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const links = [
+    { name: "Solicitudes", href: "/admin/solicitudes", icon: ClipboardList },
     { name: "Clientes", href: "/admin/clientes", icon: Users },
     { name: "Cobradores", href: "/admin/cobradores", icon: UserCog },
     { name: "Recaudaciones", href: "/admin/recaudaciones", icon: DollarSign },
