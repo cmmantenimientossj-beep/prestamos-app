@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, UserCog, DollarSign, LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
+import LoanSimulator from "@/components/LoanSimulator";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -92,6 +93,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </Link>
           );
         })}
+        <LoanSimulator />
       </nav>
       
     </div>

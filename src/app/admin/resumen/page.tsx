@@ -1,156 +1,186 @@
 import { prisma } from "@/lib/prisma";
-import DashboardCharts from "./DashboardCharts";
-import { TrendingUp, Users, Wallet, CreditCard, Activity, ArrowRight, Ban } from "lucide-react";
-import Link from "next/link";
-import { startOfMonth, startOfWeek, subMonths } from "date-fns";
+import { 
+  ChartClientesPorDia, 
+  ChartValorPrestadoPorDia, 
+  ChartPrestamosPorDia, 
+  ChartPagosYMontosPorDia 
+} from "./DashboardCharts";
+import { TrendingUp, Users, Wallet, CreditCard, Activity, CalendarDays } from "lucide-react";
+import { startOfMonth, subDays, format } from "date-fns";
 
 export default async function ResumenPage() {
-  // Global Data
-  const clientes = await prisma.cliente.count();
-  const cobradores = await prisma.usuario.count({ where: { rol: "COBRADOR" } });
-  
-  const prestamosInfo = await prisma.prestamo.aggregate({
-    _sum: {
-      monto_solicitado: true,
-      monto_total_a_devolver: true
-    },
-    _count: {
-      id: true
-    },
-    where: { estado: 'ACTIVO' }
-  });
+  const now = new Date();
+  const startOfThisMonth = startOfMonth(now);
+  const thirtyDaysAgo = subDays(now, 30);
 
-  // Calculate earnings vs loans
-  const totalLent = prestamosInfo._sum.monto_solicitado || 0;
-  const totalExpected = prestamosInfo._sum.monto_total_a_devolver || 0;
-  const projectedProfit = totalExpected - totalLent;
-
-  // Recent Collections
-  const monthStart = startOfMonth(new Date());
+  // Global & Start of Month Data
+  const clientes = await prisma.cliente.findMany({ where: { fecha_registro: { gte: thirtyDaysAgo } } });
   
-  const rendicionesEsteMes = await prisma.cajaRendicion.aggregate({
-    _sum: { monto_efectivo: true, monto_transferencias: true },
-    where: { fecha: { gte: monthStart } }
+  const prestamosActivos = await prisma.prestamo.findMany({ 
+    where: { estado: 'ACTIVO' } 
   });
   
-  const recaudacionMensual = (rendicionesEsteMes._sum.monto_efectivo || 0) + (rendicionesEsteMes._sum.monto_transferencias || 0);
+  const prestamosUltimos30 = await prisma.prestamo.findMany({
+    where: { fecha_entrega: { gte: thirtyDaysAgo } }
+  });
 
-  // Approximate historic chart data (Last 4 months for example)
-  const chartData = [];
-  for(let i=3; i>=0; i--) {
-     const startMonth = startOfMonth(subMonths(new Date(), i));
-     const endMonth = startOfMonth(subMonths(new Date(), i - 1));
-     
-     const mesPrestado = await prisma.prestamo.aggregate({
-       _sum: { monto_solicitado: true },
-       where: { fecha_entrega: { gte: startMonth, lt: endMonth } }
-     });
-     
-     const mesCobrado = await prisma.cajaRendicion.aggregate({
-       _sum: { monto_efectivo: true, monto_transferencias: true },
-       where: { fecha: { gte: startMonth, lt: endMonth } }
-     });
+  const cuotasPagadasMes = await prisma.cuota.findMany({
+    where: { estado: 'PAGADO', fecha_pago: { gte: startOfThisMonth } },
+    include: { prestamo: true }
+  });
 
-     chartData.push({
-       name: startMonth.toLocaleString('es-AR', { month: 'short' }).toUpperCase(),
-       Prestado: mesPrestado._sum.monto_solicitado || 0,
-       Recaudado: (mesCobrado._sum.monto_efectivo || 0) + (mesCobrado._sum.monto_transferencias || 0)
-     });
+  const cuotasPagadasUltimos30 = await prisma.cuota.findMany({
+    where: { estado: 'PAGADO', fecha_pago: { gte: thirtyDaysAgo } }
+  });
+
+  // Visión General Calculations (This Month)
+  let totalCapitalCobradoMes = 0;
+  let totalInteresCobradoMes = 0;
+  let moraCobradaMes = 0;
+
+  for (const cuota of cuotasPagadasMes) {
+    const interesPercentage = cuota.prestamo.porcentaje_interes / 100;
+    const cuotasTotales = cuota.prestamo.cantidad_cuotas;
+    
+    // Estimate interest out of the paid quota value (simplification without amort table)
+    const capOrig = cuota.prestamo.monto_solicitado / cuotasTotales;
+    const intOrig = (cuota.prestamo.monto_total_a_devolver - cuota.prestamo.monto_solicitado) / cuotasTotales;
+    
+    totalCapitalCobradoMes += capOrig;
+    totalInteresCobradoMes += intOrig;
+    moraCobradaMes += cuota.interes_mora_aplicado || 0;
   }
+
+  const gananciaPeriodo = totalInteresCobradoMes + moraCobradaMes;
+  const totalPrestadoAllTime = prestamosActivos.reduce((acc, p) => acc + p.monto_solicitado, 0);
+
+  // Time-Series Data Aggregation (Last 30 Days)
+  const mapData = new Map();
+  for (let i = 0; i <= 30; i++) {
+    const dateStr = format(subDays(now, i), 'yyyy-MM-dd');
+    mapData.set(dateStr, { 
+       fecha: format(subDays(now, i), 'dd/MM'),
+       rawDate: dateStr,
+       clientes: 0, 
+       valor: 0, 
+       prestamos: 0, 
+       pagos: 0, 
+       monto_pago: 0 
+    });
+  }
+
+  clientes.forEach(c => {
+    const d = format(c.fecha_registro, 'yyyy-MM-dd');
+    if (mapData.has(d)) mapData.get(d).clientes += 1;
+  });
+
+  prestamosUltimos30.forEach(p => {
+    const d = format(p.fecha_entrega, 'yyyy-MM-dd');
+    if (mapData.has(d)) {
+      mapData.get(d).valor += p.monto_solicitado;
+      mapData.get(d).prestamos += 1;
+    }
+  });
+
+  cuotasPagadasUltimos30.forEach(c => {
+    if(!c.fecha_pago) return;
+    const d = format(c.fecha_pago, 'yyyy-MM-dd');
+    if (mapData.has(d)) {
+      mapData.get(d).pagos += 1;
+      mapData.get(d).monto_pago += c.monto_pagado;
+    }
+  });
+
+  const chartData = Array.from(mapData.values()).reverse();
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Dashboard General</h1>
-        <p className="text-slate-500 mt-1">Resumen financiero y métricas de operación al instante.</p>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Dashboard & KPIs</h1>
+        <p className="text-slate-500 mt-1">Métricas y tendencias de la operación financiera.</p>
       </div>
 
-      {/* Hero KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        
-        <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 p-5 rounded-2xl shadow-lg shadow-emerald-500/20 text-white relative overflow-hidden">
-          <Wallet className="absolute right-[-10px] bottom-[-10px] text-white opacity-10" size={100} />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-100 flex items-center gap-2 mb-2">
-            <Activity size={14} /> Recaudación del Mes
-          </h3>
-          <p className="text-3xl font-black">${recaudacionMensual.toLocaleString('es-AR')}</p>
-        </div>
+      {/* Visión General (This Month) */}
+      <div className="mb-8 p-6 bg-slate-900 rounded-3xl text-white shadow-xl shadow-slate-900/10">
+         <h2 className="text-lg font-bold flex items-center gap-2 mb-6 opacity-90"><CalendarDays size={18} /> Visión General (Mes Actual)</h2>
+         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            
+            <div className="col-span-2 md:col-span-1 p-4 bg-emerald-500/20 rounded-2xl border border-emerald-500/30">
+               <span className="text-emerald-300 text-xs font-bold uppercase tracking-wider mb-1 block">Ganancia Periodo</span>
+               <span className="text-2xl font-black text-emerald-400 block">${gananciaPeriodo.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
+            </div>
 
-        <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative">
-           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-2">
-             <CreditCard size={14} className="text-blue-500"/> Capital en Calle (Activo)
-           </h3>
-           <p className="text-3xl font-black text-slate-700">${totalLent.toLocaleString('es-AR')}</p>
-           <p className="text-xs text-slate-400 mt-2 font-medium">En {prestamosInfo._count.id} préstamos activos</p>
-        </div>
+            <div className="p-4 bg-white/5 rounded-2xl">
+               <span className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1 block">Total Prestado</span>
+               <span className="text-xl font-bold text-white block">${totalPrestadoAllTime.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
+            </div>
 
-        <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative">
-           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-2">
-             <TrendingUp size={14} className="text-emerald-500"/> Ganancia Proyectada
-           </h3>
-           <p className="text-3xl font-black text-emerald-600">${projectedProfit.toLocaleString('es-AR')}</p>
-           <p className="text-xs text-slate-400 mt-2 font-medium">Intereses por cobrar futuros</p>
-        </div>
+            <div className="p-4 bg-white/5 rounded-2xl">
+               <span className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1 block">Capital Cobrado</span>
+               <span className="text-xl font-bold text-white block">${totalCapitalCobradoMes.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
+            </div>
 
-        <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm flex flex-col justify-between">
-           <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Equipo & Cartera</h3>
-              <Users size={16} className="text-slate-300" />
-           </div>
-           <div>
-             <div className="flex items-end justify-between border-b border-slate-100 pb-2 mb-2">
-                <span className="text-sm font-bold text-slate-600">Clientes Inscritos</span>
-                <span className="text-lg font-black text-slate-800">{clientes}</span>
-             </div>
-             <div className="flex items-end justify-between">
-                <span className="text-sm font-bold text-slate-600">Cobradores</span>
-                <span className="text-lg font-black text-slate-800">{cobradores}</span>
-             </div>
-           </div>
-        </div>
+            <div className="p-4 bg-white/5 rounded-2xl">
+               <span className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1 block">Interés Cobrado</span>
+               <span className="text-xl font-bold text-white block">${totalInteresCobradoMes.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
+            </div>
 
+            <div className="p-4 bg-white/5 rounded-2xl border border-red-500/20">
+               <span className="text-red-300 text-xs font-bold uppercase tracking-wider mb-1 block">Mora Cobrada</span>
+               <span className="text-xl font-bold text-red-400 block">${moraCobradaMes.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
+            </div>
+
+         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <h2 className="text-xl font-bold text-slate-800 tracking-tight mb-4 flex items-center gap-2">
+        <Activity className="text-blue-500" /> Analíticas de Operación diarios (30d)
+      </h2>
+
+      {/* Gráficos Detailed - Totalmente deslizables hacia abajo */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
         
-        {/* Gráfico Principal */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-            Flujo Financiero (Últimos meses)
-          </h2>
-          <DashboardCharts data={chartData} />
+        {/* Pagos por día & Monto */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm md:col-span-2">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-slate-700">Cant. Pagos & Monto del pago</h3>
+            <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl"><Wallet size={16}/></div>
+          </div>
+          <p className="text-xs text-slate-500">Relación entre número de cuotas cobradas y monto total recaudado.</p>
+          <ChartPagosYMontosPorDia data={chartData} />
         </div>
 
-        {/* Accesos Rápidos */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col gap-4">
-          <h2 className="text-lg font-bold text-slate-800 mb-2">Accesos Rápidos</h2>
-          
-          <Link href="/admin/recaudaciones" className="group flex justify-between items-center bg-slate-50 hover:bg-emerald-50 border border-slate-100 hover:border-emerald-200 p-4 rounded-2xl transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600"><Wallet size={20}/></div>
-              <p className="font-bold text-slate-700 group-hover:text-emerald-700">Ver Recaudaciones</p>
-            </div>
-            <ArrowRight size={18} className="text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-transform" />
-          </Link>
-
-          <Link href="/admin/cobradores" className="group flex justify-between items-center bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 p-4 rounded-2xl transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-100 p-2 rounded-xl text-blue-600"><Users size={20}/></div>
-              <p className="font-bold text-slate-700 group-hover:text-blue-700">Gestionar Cobradores</p>
-            </div>
-            <ArrowRight size={18} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-transform" />
-          </Link>
-
-          <Link href="/admin/clientes" className="group flex justify-between items-center bg-slate-50 hover:bg-purple-50 border border-slate-100 hover:border-purple-200 p-4 rounded-2xl transition-colors mb-auto">
-            <div className="flex items-center gap-3">
-              <div className="bg-purple-100 p-2 rounded-xl text-purple-600"><TrendingUp size={20}/></div>
-              <p className="font-bold text-slate-700 group-hover:text-purple-700">Directorio de Clientes</p>
-            </div>
-            <ArrowRight size={18} className="text-slate-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-transform" />
-          </Link>
-
+        {/* Valor Prestado por día */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-slate-700">Valor prestado por día</h3>
+            <div className="p-2 bg-blue-100 text-blue-600 rounded-xl"><CreditCard size={16}/></div>
+          </div>
+          <p className="text-xs text-slate-500">Capital real inyectado al mercado cada día.</p>
+          <ChartValorPrestadoPorDia data={chartData} />
         </div>
+
+        {/* Préstamos por día */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-slate-700">Préstamos entregados</h3>
+            <div className="p-2 bg-orange-100 text-orange-600 rounded-xl"><TrendingUp size={16}/></div>
+          </div>
+          <p className="text-xs text-slate-500">Volumen de créditos cerrados diariamente.</p>
+          <ChartPrestamosPorDia data={chartData} />
+        </div>
+
+        {/* Clientes nuevos por día */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm md:col-span-2 lg:col-span-1 lg:col-start-1 lg:col-end-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-slate-700">Clientes nuevos por día</h3>
+            <div className="p-2 bg-purple-100 text-purple-600 rounded-xl"><Users size={16}/></div>
+          </div>
+          <p className="text-xs text-slate-500">Recepción de nuevos clientes en la plataforma.</p>
+          <ChartClientesPorDia data={chartData} />
+        </div>
+
       </div>
       
     </div>

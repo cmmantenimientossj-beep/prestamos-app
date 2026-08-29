@@ -4,16 +4,13 @@ import type { NextConfig } from "next";
 const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
 });
 
 const nextConfig: NextConfig = {
-  eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
-  swcMinify: false,
-  experimental: {
-    workerThreads: false,
-    cpus: 1
-  },
   env: {
     NEXTAUTH_URL: process.env.NEXTAUTH_URL || "https://fake-url-for-build.com",
   }

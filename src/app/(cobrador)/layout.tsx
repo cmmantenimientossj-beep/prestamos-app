@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { Home, PlusCircle, Map, Wallet, History } from "lucide-react";
 import { LogoutButton } from "@/components/LogoutButton";
+import LoanSimulator from "@/components/LoanSimulator";
 
 export default function CobradorLayout({ children }: { children: ReactNode }) {
   return (
@@ -40,6 +41,7 @@ export default function CobradorLayout({ children }: { children: ReactNode }) {
           <Home size={24} />
           <span className="text-[10px] uppercase font-bold tracking-wider mt-1.5 opacity-90">Caja</span>
         </Link>
+        <LoanSimulator />
       </nav>
     </div>
   );
