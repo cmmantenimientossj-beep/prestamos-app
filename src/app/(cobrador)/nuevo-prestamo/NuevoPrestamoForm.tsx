@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useTransition, useEffect } from "react";
-import { UserPlus, Calculator } from "lucide-react";
+import { UserPlus, Calculator, UserCheck } from "lucide-react";
 import { generatePaymentSchedule, ModalidadPrestamo } from "@/lib/loan-calculator";
 import { createPrestamo } from "@/actions/prestamos";
 import { useRouter } from "next/navigation";
@@ -17,13 +17,18 @@ interface Cliente {
 interface FormProps {
   clientes: Cliente[];
   cobradorId: string;
+  cobradorNombre: string;
 }
 
-export default function NuevoPrestamoForm({ clientes, cobradorId }: FormProps) {
+export default function NuevoPrestamoForm({ clientes, cobradorId, cobradorNombre }: FormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const [clienteId, setClienteId] = useState(clientes[0]?.id || "");
+  const [clienteId, setClienteId] = useState("");
+  const [nuevoNombre, setNuevoNombre] = useState("");
+  const [nuevoCelular, setNuevoCelular] = useState("");
+  const [nuevaDireccion, setNuevaDireccion] = useState("");
+
   const [tipo, setTipo] = useState("NUEVO");
   const [montoStr, setMontoStr] = useState("50.000");
   const [interesStr, setInteresStr] = useState("20");
@@ -65,8 +70,6 @@ export default function NuevoPrestamoForm({ clientes, cobradorId }: FormProps) {
     let cleaned = val.replace(/[^0-9,]/g, "");
     const parts = cleaned.split(",");
     if (parts.length > 2) cleaned = parts[0] + "," + parts.slice(1).join("");
-    
-    // Only format dot separators for integers
     const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     setter(parts.length > 1 ? `${integerPart},${parts[1]}` : integerPart);
   };
@@ -108,6 +111,10 @@ export default function NuevoPrestamoForm({ clientes, cobradorId }: FormProps) {
         tipo: tipo,
         fecha_entrega: parseDateLocal(fechaEntrega),
         fecha_primer_cobro: parseDateLocal(fechaPrimerCobro),
+        // Extras for New Client
+        cliente_nuevo_nombre: nuevoNombre,
+        cliente_nuevo_celular: nuevoCelular,
+        cliente_nuevo_direccion: nuevaDireccion
       });
 
       if (res.success) {
@@ -123,12 +130,21 @@ export default function NuevoPrestamoForm({ clientes, cobradorId }: FormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Client Selection */}
-      <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
+      
+      {/* Session Context */}
+      <div className="bg-emerald-50 p-4 rounded-xl shadow-sm border border-emerald-100 flex items-center justify-between">
+        <div>
+           <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-0.5">Operador Responsable</p>
+           <p className="text-emerald-900 font-bold text-sm flex items-center gap-1.5"><UserCheck size={16}/> {cobradorNombre}</p>
+        </div>
+      </div>
+
+      {/* Applicant Selection */}
+      <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 animate-in fade-in">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-bold text-slate-700 text-sm flex items-center gap-2">
-            <UserPlus size={18} className="text-emerald-500" />
-            Seleccionar Cliente
+            <UserPlus size={18} className="text-blue-500" />
+            Solicitante
           </h3>
         </div>
         
@@ -136,13 +152,37 @@ export default function NuevoPrestamoForm({ clientes, cobradorId }: FormProps) {
           required
           value={clienteId}
           onChange={(e) => setClienteId(e.target.value)}
-          className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/50 mb-3"
+          className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50 mb-3"
         >
-          <option value="" disabled>Buscar cliente existente...</option>
-          {clientes.map(c => (
-            <option key={c.id} value={c.id}>{c.nombre_apellido}</option>
-          ))}
+          <option value="" disabled>Selecciona a quién le solicitas el crédito...</option>
+          <option value="NUEVO" className="font-black text-blue-600">(+) CREAR NUEVO CLIENTE</option>
+          <optgroup label="Clientes Existentes">
+            {clientes.map(c => (
+              <option key={c.id} value={c.id}>{c.nombre_apellido}</option>
+            ))}
+          </optgroup>
         </select>
+        
+        {/* Dynamic New Client Fields */}
+        {clienteId === "NUEVO" && (
+           <div className="mt-4 space-y-3 p-4 bg-blue-50/50 rounded-2xl border border-blue-100 animate-in zoom-in-95">
+              <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-2">Datos del Nuevo Cliente</p>
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Nombre Completo</label>
+                <input required type="text" value={nuevoNombre} onChange={e => setNuevoNombre(e.target.value)} placeholder="Ej. Juan Pérez" className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2.5 text-slate-700 mt-1 focus:ring-2 focus:ring-blue-500/50" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                 <div>
+                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Celular / WP</label>
+                   <input required type="text" value={nuevoCelular} onChange={e => setNuevoCelular(e.target.value)} placeholder="Ej. 2645123456" className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2.5 text-slate-700 mt-1 focus:ring-2 focus:ring-blue-500/50" />
+                 </div>
+                 <div>
+                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Dirección</label>
+                   <input required type="text" value={nuevaDireccion} onChange={e => setNuevaDireccion(e.target.value)} placeholder="Ej. Calle 123" className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2.5 text-slate-700 mt-1 focus:ring-2 focus:ring-blue-500/50" />
+                 </div>
+              </div>
+           </div>
+        )}
       </div>
 
       {/* Loan Conditions */}
@@ -257,8 +297,8 @@ export default function NuevoPrestamoForm({ clientes, cobradorId }: FormProps) {
       {/* Date / Calculator Result Summary */}
       {schedulePreview && (
         <PrestamoResumenCard 
-          clienteNombre={clientes.find(c => c.id === clienteId)?.nombre_apellido || "Cliente Desconocido"}
-          clienteDireccion={clientes.find(c => c.id === clienteId)?.direccion_negocio || clientes.find(c => c.id === clienteId)?.direccion_personal || "Sin dirección"}
+          clienteNombre={clienteId === "NUEVO" ? (nuevoNombre || "Nuevo Cliente") : (clientes.find(c => c.id === clienteId)?.nombre_apellido || "Desconocido")}
+          clienteDireccion={clienteId === "NUEVO" ? (nuevaDireccion || "-") : (clientes.find(c => c.id === clienteId)?.direccion_negocio || clientes.find(c => c.id === clienteId)?.direccion_personal || "Sin dirección")}
           montoPrestado={parseNumber(montoStr)}
           montoTotalDevolver={schedulePreview.montoTotalDevolver}
           valorCuota={schedulePreview.valorCuota}
