@@ -93,8 +93,9 @@ export async function approvePrestamo(id: string) {
             data: {
                nombre_apellido: solicitud.nuevo_cliente_nombre_apellido || "Desconocido",
                direccion_personal: solicitud.nuevo_cliente_direccion_personal || null,
-               celular: solicitud.nuevo_cliente_celular || null, 
-               estado: "ACTIVO"
+               celular: solicitud.nuevo_cliente_celular || null,
+               // Auto-generamos un DNI temporal para cumplir con el esquema único si no fue proporcionado
+               dni: `TEMP-${randomBytes(4).toString("hex").toUpperCase()}`
             }
          });
          activeClienteId = nc.id;

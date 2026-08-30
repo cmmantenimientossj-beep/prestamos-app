@@ -14,7 +14,7 @@ export default function ApproveButton({ prestamoId, clienteVal, cobradorNum, mon
       if (res.success) {
         setApproved(true);
       } else {
-        alert("Error al aprobar");
+        alert(res.error || "Error al aprobar");
       }
     });
   };
