@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import BotonRendicion from "./BotonRendicion";
 
 export default async function ResumenCajaPage() {
   const session = await getServerSession(authOptions);
@@ -12,22 +13,27 @@ export default async function ResumenCajaPage() {
   
   const cobradorId = (session.user as any).id;
 
-  // Fechas del día actual (00:00 a 23:59)
-  const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfDay = new Date(startOfDay);
-  endOfDay.setDate(endOfDay.getDate() + 1);
+  // 1. Encontrar la ultima rendicion APROBADA o PENDIENTE
+  const ultimaRendicion = await prisma.cajaRendicion.findFirst({
+    where: { cobrador_id: cobradorId },
+    orderBy: { fecha: 'desc' }
+  });
 
-  // 1. Cuotas Cobradas Hoy
-  const cuotasPagadasHoy = await prisma.cuota.findMany({
+  const isPendiente = ultimaRendicion?.estado === 'PENDIENTE';
+  
+  // Limite Inferior: si no hay rendicion, o la anterior esta aprobada, buscamos desde la ultima fecha. Si esta pendiente... buscamos desde la fecha ANTERIOR? 
+  // No, si esta PENDIENTE, congelamos la pantalla y no dejamos acumular mas para no marear el componente, o sumamos pero el boton esta deshabilitado.
+  const fechaDesde = ultimaRendicion ? ultimaRendicion.fecha : new Date(0);
+
+  // 2. Cuotas Cobradas desde la última rendición
+  const cuotasPagadasDesde = await prisma.cuota.findMany({
     where: {
       prestamo: {
         cobrador_id: cobradorId
       },
-      estado: { in: ['PAGADA', 'PARCIAL'] },
+      estado: { in: ['PAGADO', 'PARCIAL'] },
       fecha_pago: {
-        gte: startOfDay,
-        lt: endOfDay
+        gt: fechaDesde
       }
     }
   });
@@ -35,37 +41,34 @@ export default async function ResumenCajaPage() {
   let totalEfectivo = 0;
   let totalTransferencia = 0;
   
-  cuotasPagadasHoy.forEach(c => {
-    // Si se pagó por transferencia o MP
+  cuotasPagadasDesde.forEach(c => {
     if (c.medio_pago === 'TRANSFERENCIA' || c.medio_pago === 'MERCADOPAGO') {
-      totalTransferencia += c.monto_pagado;
+      totalTransferencia += (c.monto_pagado || 0);
     } else {
-      totalEfectivo += c.monto_pagado; // Por defecto o Efectivo
+      totalEfectivo += (c.monto_pagado || 0);
     }
   });
 
+  const cantCuotasCobradas = cuotasPagadasDesde.length;
   const totalARendir = totalEfectivo + totalTransferencia;
-  const cantCuotasCobradas = cuotasPagadasHoy.length;
 
-  // 2. Cuotas Pendientes de Visita (Hoy o Vencidas)
+  // Calcular las Pendientes HOY
+  const now = new Date();
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   const cuotasPendientes = await prisma.cuota.count({
     where: {
-      prestamo: {
-        cobrador_id: cobradorId
-      },
-      estado: { in: ['PENDIENTE', 'MORA', 'PARCIAL'] },
-      fecha_vencimiento: {
-        lt: endOfDay
-      }
+      prestamo: { cobrador_id: cobradorId },
+      estado: { in: ['PENDIENTE', 'MORA'] },
+      fecha_vencimiento: { lt: endOfDay }
     }
   });
 
-  // 3. Préstamos Emitidos Hoy (Dinero que salió)
+  // Préstamos Emitidos Hoy (Dinero que salió)
   const prestamosEmitidos = await prisma.prestamo.aggregate({
     where: {
       cobrador_id: cobradorId,
       fecha_entrega: {
-        gte: startOfDay,
+        gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
         lt: endOfDay
       }
     },
@@ -76,7 +79,6 @@ export default async function ResumenCajaPage() {
 
   const totalSalida = prestamosEmitidos._sum.monto_solicitado || 0;
 
-  // Formateador de moneda
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(amount);
   };
@@ -85,13 +87,20 @@ export default async function ResumenCajaPage() {
     <div className="animate-in fade-in zoom-in-95 duration-300">
       <div className="mb-6">
         <h2 className="text-2xl font-black text-slate-800 tracking-tight">Rendición de Caja</h2>
-        <p className="text-slate-500 text-sm mt-0.5">Estado actual de tu caja diaria</p>
+        <p className="text-slate-500 text-sm mt-0.5">Control de liquidez recaudada</p>
       </div>
+
+      {isPendiente && (
+         <div className="bg-orange-50 border border-orange-200 text-orange-800 p-4 rounded-2xl mb-6 shadow-sm">
+           <p className="font-bold text-sm mb-1">Caja en Revisión</p>
+           <p className="text-xs">Tienes un cierre pendiente de auditoría por el administrador. El dinero que cobres ahora se acumulará para el siguiente cierre.</p>
+         </div>
+      )}
 
       {/* Main Totals */}
       <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-[2rem] text-white shadow-xl shadow-slate-900/20 mb-6 relative overflow-hidden">
         <div className="absolute -right-8 -top-8 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl"></div>
-        <p className="text-sm text-slate-400 font-bold uppercase tracking-wider mb-1">Total a Rendir Hoy</p>
+        <p className="text-sm text-slate-400 font-bold uppercase tracking-wider mb-1">Total a Rendir (Sin auditar)</p>
         <h2 className="text-5xl font-black mb-6 tracking-tight">{formatMoney(totalARendir)}</h2>
         
         <div className="grid grid-cols-2 gap-4 border-t border-slate-700/80 pt-5">
@@ -115,20 +124,19 @@ export default async function ResumenCajaPage() {
           <div className="w-10 h-10 bg-emerald-200/50 rounded-full flex items-center justify-center text-emerald-600 mb-3">
              <CheckCircle2 size={20} strokeWidth={2.5} />
           </div>
-          <p className="text-sm font-black text-slate-700">{cantCuotasCobradas} Cuota(s)</p>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Cobradas hoy</p>
+          <p className="text-sm font-black text-slate-700">{cantCuotasCobradas} Cobros</p>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">Dinero sin entregar</p>
         </div>
         
         <div className="bg-amber-50 border border-amber-100 p-4 rounded-3xl">
           <div className="w-10 h-10 bg-amber-200/50 rounded-full flex items-center justify-center text-amber-600 mb-3">
              <Navigation size={20} strokeWidth={2.5} className="rotate-45" />
           </div>
-          <p className="text-sm font-black text-slate-700">{cuotasPendientes} Pendientes</p>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">De visita</p>
+          <p className="text-sm font-black text-slate-700">{cuotasPendientes} Visitas</p>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">Pendientes de hoy y mora</p>
         </div>
       </div>
 
-      {/* Caja Operations */}
       <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
         <h3 className="font-black text-slate-800 mb-4">Cierre de Jornada</h3>
         
@@ -139,13 +147,16 @@ export default async function ResumenCajaPage() {
           </span>
         </div>
 
-        <button 
-          className="w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-slate-900/20 active:scale-95 transition-all flex justify-center items-center gap-2"
-        >
-          Enviar Rendición
-        </button>
-        <p className="text-center text-xs text-slate-400 font-medium mt-4 px-4 leading-relaxed">
-          Al enviar la rendición, el administrador recibirá una notificación para auditar la caja.
+        <BotonRendicion 
+           cobradorId={cobradorId}
+           efectivo={totalEfectivo}
+           transferencias={totalTransferencia}
+           cantCuotas={cantCuotasCobradas}
+           disable={isPendiente}
+        />
+        
+        <p className="text-center text-[10px] uppercase font-bold text-slate-400 mt-4 px-4">
+          Al enviar la rendición, el administrador procederá con la auditoría de caja.
         </p>
       </div>
 
