@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, UserCog, DollarSign, LogOut, ClipboardList } from "lucide-react";
 import { signOut } from "next-auth/react";
 import LoanSimulator from "@/components/LoanSimulator";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -51,25 +52,33 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             })}
           </nav>
         </div>
-        <button 
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all w-full mt-8"
-        >
-          <LogOut size={20} />
-          <span className="font-medium">Cerrar Sesión</span>
-        </button>
+        <div className="mt-8 flex gap-2">
+          <div className="bg-slate-100 rounded-xl flex items-center justify-center p-2">
+            <NotificationBell />
+          </div>
+          <button 
+            onClick={handleLogout}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all"
+          >
+            <LogOut size={20} />
+            <span className="font-medium hidden lg:inline">Salir</span>
+          </button>
+        </div>
       </aside>
 
       {/* Mobile Top Header (only on mobile) */}
       <header className="md:hidden bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-30 flex justify-between items-center rounded-b-2xl">
         <h1 className="font-bold text-xl tracking-tight">RYB Admin</h1>
-        <button 
-          onClick={handleLogout}
-          className="p-2 bg-emerald-700/60 rounded-full hover:bg-emerald-800/80 transition-colors"
-          title="Cerrar sesión"
-        >
-          <LogOut size={18} />
-        </button>
+        <div className="flex gap-2 items-center">
+           <NotificationBell />
+           <button 
+             onClick={handleLogout}
+             className="p-2 bg-emerald-700/60 rounded-full hover:bg-emerald-800/80 transition-colors"
+             title="Cerrar sesión"
+           >
+             <LogOut size={18} />
+           </button>
+        </div>
       </header>
 
       {/* Main Content */}

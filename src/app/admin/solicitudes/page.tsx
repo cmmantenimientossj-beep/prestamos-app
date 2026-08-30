@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import ApproveButton from "./ApproveButton";
+import RejectButton from "./RejectButton";
 import { ClipboardList } from "lucide-react";
 
 export default async function SolicitudesPage() {
@@ -47,7 +48,11 @@ export default async function SolicitudesPage() {
                   </div>
                   <p className="text-xs text-slate-500 mt-3 font-semibold flex items-center gap-1">Generado por: <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{s.cobrador?.nombre || "Desconocido"}</span></p>
                </div>
-               <div className="w-full md:w-auto mt-4 md:mt-0 flex justify-end">
+               <div className="w-full md:w-auto mt-4 md:mt-0 flex gap-2 justify-end">
+                  <RejectButton
+                    prestamoId={s.id}
+                    cobradorCelular={s.cobrador?.celular || ""}
+                  />
                   <ApproveButton 
                     prestamoId={s.id} 
                     clienteVal={nombreMostrar} 

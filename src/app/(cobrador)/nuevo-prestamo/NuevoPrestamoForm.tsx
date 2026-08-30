@@ -26,6 +26,7 @@ export default function NuevoPrestamoForm({ clientes, cobradorId, cobradorNombre
 
   const [clienteId, setClienteId] = useState("");
   const [nuevoNombre, setNuevoNombre] = useState("");
+  const [nuevoDni, setNuevoDni] = useState("");
   const [nuevoCelular, setNuevoCelular] = useState("");
   const [nuevaDireccion, setNuevaDireccion] = useState("");
 
@@ -113,6 +114,7 @@ export default function NuevoPrestamoForm({ clientes, cobradorId, cobradorNombre
         fecha_primer_cobro: parseDateLocal(fechaPrimerCobro),
         // Extras for New Client
         cliente_nuevo_nombre: nuevoNombre,
+        cliente_nuevo_dni: nuevoDni,
         cliente_nuevo_celular: nuevoCelular,
         cliente_nuevo_direccion: nuevaDireccion
       });
@@ -171,15 +173,19 @@ export default function NuevoPrestamoForm({ clientes, cobradorId, cobradorNombre
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Nombre Completo</label>
                 <input required type="text" value={nuevoNombre} onChange={e => setNuevoNombre(e.target.value)} placeholder="Ej. Juan Pérez" className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2.5 text-slate-700 mt-1 focus:ring-2 focus:ring-blue-500/50" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                 <div>
+                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">DNI</label>
+                   <input required type="text" value={nuevoDni} onChange={e => setNuevoDni(e.target.value)} placeholder="Ej. 30123456" className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2.5 text-slate-700 mt-1 focus:ring-2 focus:ring-blue-500/50" />
+                 </div>
                  <div>
                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Celular / WP</label>
                    <input required type="text" value={nuevoCelular} onChange={e => setNuevoCelular(e.target.value)} placeholder="Ej. 2645123456" className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2.5 text-slate-700 mt-1 focus:ring-2 focus:ring-blue-500/50" />
                  </div>
-                 <div>
-                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Dirección</label>
-                   <input required type="text" value={nuevaDireccion} onChange={e => setNuevaDireccion(e.target.value)} placeholder="Ej. Calle 123" className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2.5 text-slate-700 mt-1 focus:ring-2 focus:ring-blue-500/50" />
-                 </div>
+              </div>
+              <div className="mt-3">
+                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Dirección Completa (Barrio, Calle, N°)</label>
+                 <input required type="text" value={nuevaDireccion} onChange={e => setNuevaDireccion(e.target.value)} placeholder="Ej. Barrio Los Pinos, Calle 1, Mzna A Casa 12" className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2.5 text-slate-700 mt-1 focus:ring-2 focus:ring-blue-500/50" />
               </div>
            </div>
         )}

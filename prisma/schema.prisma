@@ -26,6 +26,7 @@ model Usuario {
   rendiciones       CajaRendicion[]
   auditLogs         AuditLog[]
   solicitudes       SolicitudPrestamo[] @relation("UsuarioSols")
+  notificaciones    Notificacion[]
 }
 
 model Cliente {
@@ -52,6 +53,7 @@ model SolicitudPrestamo {
   
   // Datos si es cliente nuevo
   nuevo_cliente_nombre_apellido    String?
+  nuevo_cliente_dni                String?
   nuevo_cliente_direccion_personal String?
   nuevo_cliente_celular            String?
 
@@ -129,4 +131,15 @@ model AuditLog {
   fecha_hora         DateTime @default(now())
 
   usuario Usuario @relation(fields: [usuario_id], references: [id])
+}
+
+model Notificacion {
+  id          String   @id @default(uuid())
+  usuario_id  String
+  titulo      String
+  mensaje     String
+  leida       Boolean  @default(false)
+  fecha       DateTime @default(now())
+
+  usuario     Usuario  @relation(fields: [usuario_id], references: [id])
 }

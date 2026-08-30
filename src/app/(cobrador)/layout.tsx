@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Home, PlusCircle, Map, Wallet, History } from "lucide-react";
 import { LogoutButton } from "@/components/LogoutButton";
 import LoanSimulator from "@/components/LoanSimulator";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function CobradorLayout({ children }: { children: ReactNode }) {
   return (
@@ -13,7 +14,10 @@ export default function CobradorLayout({ children }: { children: ReactNode }) {
           <Wallet size={24} className="opacity-90" />
           <h1 className="font-bold text-xl tracking-tight">Ruta RYB</h1>
         </div>
-        <LogoutButton />
+        <div className="flex flex-row items-center gap-2">
+           <NotificationBell />
+           <LogoutButton />
+        </div>
       </header>
 
       {/* Main Scrollable Content */}

@@ -17,6 +17,7 @@ export interface CreatePrestamoInput {
   fecha_primer_cobro: Date;
   
   cliente_nuevo_nombre?: string;
+  cliente_nuevo_dni?: string;
   cliente_nuevo_direccion?: string;
   cliente_nuevo_celular?: string;
 }
@@ -31,6 +32,7 @@ export async function createPrestamo(data: CreatePrestamoInput) {
         cobrador_id: data.cobrador_id,
         cliente_id: isNew ? null : data.cliente_id,
         nuevo_cliente_nombre_apellido: isNew ? data.cliente_nuevo_nombre : null,
+        nuevo_cliente_dni: isNew ? data.cliente_nuevo_dni : null,
         nuevo_cliente_direccion_personal: isNew ? data.cliente_nuevo_direccion : null,
         nuevo_cliente_celular: isNew ? data.cliente_nuevo_celular : null,
         monto_solicitado: data.monto_solicitado,
@@ -94,8 +96,8 @@ export async function approvePrestamo(id: string) {
                nombre_apellido: solicitud.nuevo_cliente_nombre_apellido || "Desconocido",
                direccion_personal: solicitud.nuevo_cliente_direccion_personal || null,
                celular: solicitud.nuevo_cliente_celular || null,
-               // Auto-generamos un DNI temporal para cumplir con el esquema único si no fue proporcionado
-               dni: `TEMP-${randomBytes(4).toString("hex").toUpperCase()}`
+               // Si se proporcionó el DNI real (casi seguro ya que el backend lo captura ahora), se usa. Si no, genera temporal.
+               dni: solicitud.nuevo_cliente_dni || `TEMP-${randomBytes(4).toString("hex").toUpperCase()}`
             }
          });
          activeClienteId = nc.id;
@@ -148,5 +150,45 @@ export async function approvePrestamo(id: string) {
   } catch (error: any) {
     console.error("Error approving prestamo:", error);
     return { success: false, error: error.message || "Failed to approve prestamo" };
+  }
+}
+
+export async function rejectPrestamo(id: string, motivo: string) {
+  try {
+    const solicitud = await prisma.solicitudPrestamo.findUnique({ where: { id } });
+    if (!solicitud || solicitud.estado !== "PENDIENTE") {
+       throw new Error("Solicitud inválida o ya procesada.");
+    }
+    
+    await prisma.$transaction(async (tx: any) => {
+       await tx.solicitudPrestamo.update({
+          where: { id: solicitud.id },
+          data: { estado: "RECHAZADA" }
+       });
+
+       // Create in-app Notification for the collector
+       await tx.notificacion.create({
+          data: {
+             usuario_id: solicitud.cobrador_id,
+             titulo: "Solicitud Rechazada",
+             mensaje: `Tu solicitud para ${solicitud.cliente_id ? "el cliente ID "+solicitud.cliente_id : (solicitud.nuevo_cliente_nombre_apellido || "Desconocido")} por $${solicitud.monto_solicitado} fue RECHAZADA. Motivo del administrador: ${motivo}`
+          }
+       });
+       
+       await tx.auditLog.create({
+          data: {
+             usuario_id: solicitud.cobrador_id, // Atribuido al cobrador porque es su entidad
+             accion: "SOLICITUD_RECHAZADA_POR_ADMIN",
+             entidad_afectada: `Solicitud_${solicitud.id}`,
+             valores_nuevos: motivo,
+          }
+       });
+    });
+
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error rejecting prestamo:", error);
+    return { success: false, error: error.message || "Fallo interno al rechazar" };
   }
 }
