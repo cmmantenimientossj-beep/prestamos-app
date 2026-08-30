@@ -56,9 +56,9 @@ export default function SolicitudesList({ solicitudes }: { solicitudes: any[] })
 
        {/* DETAILS MODAL */}
        {activeSol && (
-          <div className="fixed inset-0 z-50 flex flex-col justify-end bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="absolute inset-0" onClick={() => setSelectedId(null)}></div>
-            <div className="bg-white w-full max-w-lg mx-auto sm:mb-8 rounded-t-[2rem] sm:rounded-3xl p-6 md:p-8 relative z-10 shadow-2xl animate-in slide-in-from-bottom-[50%] duration-300 max-h-[85vh] overflow-y-auto">
+            <div className="bg-white w-full h-full sm:h-auto sm:max-w-lg mx-auto rounded-none sm:rounded-3xl p-6 md:p-8 relative z-10 shadow-2xl animate-in slide-in-from-bottom-[50%] duration-300 overflow-y-auto">
                
                <button 
                  type="button" 
