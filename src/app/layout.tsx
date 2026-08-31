@@ -29,6 +29,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        {/* NATIVE INLINE SCRIPT: Destruye los Service Workers inmortalizados sin depender de JS/React chunks */}
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                  registration.unregister();
+                }
+              });
+            }
+          `
+        }} />
         <ServiceWorkerPurger />
         <InstallPrompt />
         {children}
