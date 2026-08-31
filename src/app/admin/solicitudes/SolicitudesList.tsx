@@ -34,7 +34,12 @@ export default function SolicitudesList({ solicitudes }: { solicitudes: any[] })
           return (
              <button 
                key={s.id}
-               onClick={() => setSelectedId(s.id)}
+               onClick={() => {
+                 setSelectedId(s.id);
+                 if (typeof window !== "undefined") {
+                    console.log("Activando modal para:", s.id);
+                 }
+               }}
                className="w-full bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center hover:bg-slate-50 transition-colors active:scale-[0.98] text-left"
              >
                 <div>
@@ -56,9 +61,9 @@ export default function SolicitudesList({ solicitudes }: { solicitudes: any[] })
 
        {/* DETAILS MODAL */}
        {activeSol && (
-          <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="absolute inset-0" onClick={() => setSelectedId(null)}></div>
-            <div className="bg-white w-full h-full sm:h-auto sm:max-w-lg mx-auto rounded-none sm:rounded-3xl p-6 md:p-8 relative z-10 shadow-2xl animate-in slide-in-from-bottom-[50%] duration-300 overflow-y-auto">
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+            <div style={{ position: 'absolute', inset: 0 }} onClick={() => setSelectedId(null)}></div>
+            <div className="bg-white w-full max-w-md mx-auto rounded-3xl p-6 relative z-10 shadow-2xl max-h-[90vh] overflow-y-auto">
                
                <button 
                  type="button" 
@@ -68,13 +73,13 @@ export default function SolicitudesList({ solicitudes }: { solicitudes: any[] })
                  <X size={20} />
                </button>
 
-               <div className="mb-6 mt-2">
+               <div className="mb-6 pr-6">
                  <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1 flex items-center gap-1">
                    <Info size={12}/> Expediente de Solicitud
                  </p>
-                 <h2 className="text-2xl font-black text-slate-800 leading-tight uppercase flex items-center gap-2">
+                 <h2 className="text-xl sm:text-2xl font-black text-slate-800 leading-tight uppercase">
                    {cNombre}
-                   {isNew && <span className="bg-blue-100 text-blue-600 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest align-middle">Nuevo</span>}
+                   {isNew && <span className="inline-block ml-2 bg-blue-100 text-blue-600 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest align-middle">Nuevo</span>}
                  </h2>
                </div>
 
