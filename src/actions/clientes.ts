@@ -60,3 +60,22 @@ export async function deleteCliente(id: string) {
     return { success: false, error: "El cliente tiene un historial de préstamos o cuotas que impide su eliminación." };
   }
 }
+
+export async function updateClienteCrm(id: string, notas_internas: string, calificacion: string) {
+  try {
+    await prisma.cliente.update({
+      where: { id },
+      data: {
+        notas_internas: notas_internas || null,
+        calificacion: calificacion as any
+      }
+    });
+
+    revalidatePath("/admin/clientes/[id]", "page");
+    revalidatePath("/admin/clientes", "page");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating CRM data:", error);
+    return { success: false, error: "No se pudo actualizar el perfil avanzado del cliente." };
+  }
+}

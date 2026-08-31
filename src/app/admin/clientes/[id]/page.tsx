@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { ArrowLeft, User, Phone, MapPin, Store, DollarSign, Wallet, TrendingUp } from "lucide-react";
 import ClientProfileTabs from "./ClientProfileTabs";
+import CrmControls from "./CrmControls";
+import PrintStatement from "./PrintStatement";
 
 export default async function ClientHistoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -83,48 +85,70 @@ export default async function ClientHistoryPage({ params }: { params: Promise<{ 
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/admin/clientes" className="p-3 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 rounded-2xl transition-colors shadow-sm">
-          <ArrowLeft size={20} />
-        </Link>
-        <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight leading-tight uppercase flex items-center gap-2">
-            {cliente.nombre_apellido}
-            <a href={wApp} target="_blank" rel="noreferrer" className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] uppercase font-black cursor-pointer hover:bg-emerald-200 transition-colors">
-              WhatsApp
-            </a>
-          </h1>
-          <p className="text-slate-500 mt-1 font-mono text-sm tracking-wide">DNI: {cliente.dni}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <Link href="/admin/clientes" className="p-3 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 rounded-2xl transition-colors shadow-sm">
+            <ArrowLeft size={20} />
+          </Link>
+          <div>
+            <h1 className="text-3xl font-black text-slate-800 tracking-tight leading-tight uppercase flex items-center gap-2">
+              {cliente.nombre_apellido}
+              <a href={wApp} target="_blank" rel="noreferrer" className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] uppercase font-black cursor-pointer hover:bg-emerald-200 transition-colors">
+                WhatsApp
+              </a>
+            </h1>
+            <p className="text-slate-500 mt-1 font-mono text-sm tracking-wide">DNI: {cliente.dni}</p>
+          </div>
+        </div>
+        
+        {/* Acciones */}
+        <div className="w-full sm:w-auto min-w-[240px]">
+           <PrintStatement 
+              clienteNombre={cliente.nombre_apellido}
+              clienteDni={cliente.dni}
+              porcentajeCumplimiento={porcentajeCumplimiento}
+              totalPrestamos={totalPrestamos}
+              deudaActiva={deudaActiva}
+           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         
-        {/* Identidad */}
-        <div className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm col-span-1 flex flex-col justify-between">
-          <div>
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-1.5"><User size={14}/> Perfil Legal</h3>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <MapPin className="text-blue-500 shrink-0 mt-0.5" size={18} />
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Casa</p>
-                  <p className="text-slate-700 font-bold text-sm">{cliente.direccion_personal || 'N/A'}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Store className="text-amber-500 shrink-0 mt-0.5" size={18} />
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Negocio ({cliente.nombre_negocio || 'N/A'})</p>
-                  <p className="text-slate-700 font-bold text-sm">{cliente.direccion_negocio || 'N/A'}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="mt-8 pt-6 border-t border-slate-100">
-             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cobradores Asignados</p>
-             <p className="text-slate-700 font-semibold text-sm">Automático por Ruta</p>
-          </div>
+        {/* Identidad & CRM */}
+        <div className="flex flex-col gap-6 col-span-1">
+           <div className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between">
+             <div>
+               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-1.5"><User size={14}/> Perfil Legal</h3>
+               <div className="space-y-4">
+                 <div className="flex items-start gap-3">
+                   <MapPin className="text-blue-500 shrink-0 mt-0.5" size={18} />
+                   <div>
+                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Casa</p>
+                     <p className="text-slate-700 font-bold text-sm">{cliente.direccion_personal || 'N/A'}</p>
+                   </div>
+                 </div>
+                 <div className="flex items-start gap-3">
+                   <Store className="text-amber-500 shrink-0 mt-0.5" size={18} />
+                   <div>
+                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Negocio ({cliente.nombre_negocio || 'N/A'})</p>
+                     <p className="text-slate-700 font-bold text-sm">{cliente.direccion_negocio || 'N/A'}</p>
+                   </div>
+                 </div>
+               </div>
+             </div>
+             <div className="mt-8 pt-6 border-t border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cobradores Asignados</p>
+                <p className="text-slate-700 font-semibold text-sm">Automático por Ruta</p>
+             </div>
+           </div>
+           
+           {/* Módulo Interactivo CRM */}
+           <CrmControls 
+             clienteId={cliente.id} 
+             initialNotas={cliente.notas_internas} 
+             initialCalificacion={cliente.calificacion} 
+           />
         </div>
 
         {/* Score & Radar Financiero */}

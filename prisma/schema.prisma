@@ -29,6 +29,13 @@ model Usuario {
   notificaciones    Notificacion[]
 }
 
+enum CalificacionRiesgo {
+  NEUTRAL
+  BUENO
+  MALO
+  LISTA_NEGRA
+}
+
 model Cliente {
   id                 String   @id @default(uuid())
   nombre_apellido    String
@@ -37,6 +44,10 @@ model Cliente {
   direccion_negocio  String?
   nombre_negocio     String?
   celular            String?
+  
+  // CRM Avanzado
+  notas_internas     String?  @db.Text
+  calificacion       CalificacionRiesgo @default(NEUTRAL)
   
   cobrador_asignado_id String?
   cobrador           Usuario? @relation(fields: [cobrador_asignado_id], references: [id])

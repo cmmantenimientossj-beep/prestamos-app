@@ -12,6 +12,8 @@ interface Cliente {
   nombre_apellido: string;
   direccion_negocio: string | null;
   direccion_personal: string | null;
+  calificacion: string;
+  notas_internas: string | null;
 }
 
 interface FormProps {
@@ -164,6 +166,35 @@ export default function NuevoPrestamoForm({ clientes, cobradorId, cobradorNombre
             ))}
           </optgroup>
         </select>
+
+        {/* CRM Risk Alert Container */}
+        {clienteId && clienteId !== "NUEVO" && (
+           (() => {
+              const cli = clientes.find(c => c.id === clienteId);
+              if (!cli || (cli.calificacion === 'NEUTRAL' && !cli.notas_internas)) return null;
+
+              const isMalo = cli.calificacion === 'MALO' || cli.calificacion === 'LISTA_NEGRA';
+              const isBueno = cli.calificacion === 'BUENO';
+
+              return (
+                 <div className={`mt-3 mb-4 p-4 rounded-2xl border ${isMalo ? 'bg-red-50 border-red-200' : isBueno ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'} flex flex-col gap-2 animate-in fade-in slide-in-from-top-2`}>
+                   <div className="flex items-center justify-between">
+                     <span className={`text-[10px] uppercase font-black tracking-widest ${isMalo ? 'text-red-600' : isBueno ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        Calificación Admin
+                     </span>
+                     <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${isMalo ? 'bg-red-200 text-red-800' : isBueno ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'}`}>
+                        {cli.calificacion.replace('_', ' ')}
+                     </span>
+                   </div>
+                   {cli.notas_internas && (
+                     <div className="mt-1 pt-2 border-t border-black/5">
+                        <p className={`text-xs font-bold ${isMalo ? 'text-red-900' : isBueno ? 'text-emerald-900' : 'text-amber-900'}`}>{cli.notas_internas}</p>
+                     </div>
+                   )}
+                 </div>
+              );
+           })()
+        )}
         
         {/* Dynamic New Client Fields */}
         {clienteId === "NUEVO" && (

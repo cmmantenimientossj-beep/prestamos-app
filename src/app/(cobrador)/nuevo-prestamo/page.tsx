@@ -16,7 +16,7 @@ export default async function NuevoPrestamoPage() {
 
   // Fetch available clients
   const clientes = await prisma.cliente.findMany({
-    select: { id: true, nombre_apellido: true, direccion_negocio: true, direccion_personal: true },
+    select: { id: true, nombre_apellido: true, direccion_negocio: true, direccion_personal: true, calificacion: true, notas_internas: true },
     orderBy: { nombre_apellido: 'asc' }
   });
 
