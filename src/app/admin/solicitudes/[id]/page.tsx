@@ -4,6 +4,7 @@ import { User, FileText, MapPin, Phone, Info, ChevronLeft } from "lucide-react";
 import ApproveButton from "../ApproveButton";
 import RejectButton from "../RejectButton";
 import Link from "next/link";
+import { generatePaymentSchedule } from "@/lib/loan-calculator";
 
 export default async function SolicitudEvaluationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -27,6 +28,18 @@ export default async function SolicitudEvaluationPage({ params }: { params: Prom
     return Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
+  const safeFormatDate = (d: Date) => {
+     return d.toISOString().split('T')[0].split('-').reverse().join('/');
+  };
+
+  const projection = generatePaymentSchedule({
+      monto_solicitado: sol.monto_solicitado,    
+      porcentaje_interes: sol.porcentaje_interes,     
+      cantidad_cuotas: sol.cantidad_cuotas,
+      modalidad: sol.modalidad as any,
+      fecha_inicio: sol.fecha_primer_cobro,
+  });
+
   return (
     <div className="pb-10 max-w-2xl mx-auto">
       
@@ -47,55 +60,66 @@ export default async function SolicitudEvaluationPage({ params }: { params: Prom
 
       <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
          {/* Identidad Card */}
-         <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 mb-4 space-y-3">
+         <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 mb-4 space-y-4">
            <h4 className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1 flex items-center gap-1.5"><User size={14}/> Datos Personales</h4>
            
            <div className="grid grid-cols-2 gap-4">
              <div>
-               <p className="text-[10px] uppercase font-bold text-slate-400">DNI</p>
-               <p className="font-semibold text-slate-700 text-sm">{cDni}</p>
+               <p className="text-xs uppercase font-black text-indigo-500 tracking-wider">DNI</p>
+               <p className="font-black text-slate-800 text-xl">{cDni}</p>
              </div>
              <div>
-               <p className="text-[10px] uppercase font-bold text-slate-400">Celular</p>
-               <p className="font-semibold text-slate-700 text-sm">{cTel}</p>
+               <p className="text-xs uppercase font-black text-indigo-500 tracking-wider">Celular</p>
+               <p className="font-black text-slate-800 text-xl">{cTel}</p>
              </div>
            </div>
            
            <div>
-             <p className="text-[10px] uppercase font-bold text-slate-400">Dirección Constatada</p>
-             <p className="font-semibold text-slate-700 text-sm">{cDir}</p>
+             <p className="text-xs uppercase font-black text-indigo-500 tracking-wider">Dirección Constatada</p>
+             <p className="font-black text-slate-800 text-xl">{cDir}</p>
            </div>
          </div>
 
          {/* Prestamo Card */}
-         <div className="bg-emerald-50/50 rounded-2xl p-4 border border-emerald-100 mb-6 space-y-3">
-           <h4 className="text-[10px] text-emerald-600/70 font-bold uppercase tracking-widest mb-1 flex items-center gap-1.5"><FileText size={14}/> Detalles del Crédito</h4>
+         <div className="bg-emerald-50/50 rounded-2xl p-4 border border-emerald-200 mb-6 space-y-5">
+           <h4 className="text-[10px] text-emerald-600/70 font-bold uppercase tracking-widest mb-1 flex items-center gap-1.5"><FileText size={14}/> Detalles Financieros</h4>
            
-           <div className="flex border-b border-emerald-100 pb-3">
+           <div className="flex border-b border-emerald-100 pb-4">
              <div className="w-1/2">
-               <p className="text-[10px] uppercase font-bold text-emerald-600/70">Monto Final</p>
-               <p className="font-black text-emerald-800 text-xl" suppressHydrationWarning>${formatCurrency(sol.monto_solicitado)}</p>
+               <p className="text-xs uppercase font-black text-emerald-600 tracking-wider">Monto Prestado</p>
+               <p className="font-black text-slate-800 text-2xl mt-1" suppressHydrationWarning>${formatCurrency(sol.monto_solicitado)}</p>
              </div>
              <div className="w-1/2 border-l border-emerald-100 pl-4">
-               <p className="text-[10px] uppercase font-bold text-emerald-600/70">Interés Acordado</p>
-               <p className="font-black text-slate-800 text-lg">{sol.porcentaje_interes}%</p>
+               <p className="text-xs uppercase font-black text-emerald-600 tracking-wider">Total a Devolver</p>
+               <p className="font-black text-slate-800 text-2xl mt-1" suppressHydrationWarning>${formatCurrency(projection.montoTotalDevolver)}</p>
              </div>
            </div>
            
-           <div className="flex">
+           <div className="flex border-b border-emerald-100 pb-4">
              <div className="w-1/2">
-               <p className="text-[10px] uppercase font-bold text-emerald-600/70">Régimen</p>
-               <p className="font-semibold text-slate-700 text-sm">{sol.cantidad_cuotas} cuotas ({sol.modalidad.toLowerCase()})</p>
+               <p className="text-xs uppercase font-black text-emerald-600 tracking-wider">Régimen ({sol.modalidad})</p>
+               <p className="font-black text-slate-700 text-lg mt-1">{sol.cantidad_cuotas} Pagos | Disp.: {sol.tipo}</p>
              </div>
              <div className="w-1/2 border-l border-emerald-100 pl-4">
-               <p className="text-[10px] uppercase font-bold text-emerald-600/70">Tipo</p>
-               <p className="font-semibold text-slate-700 text-sm">{sol.tipo}</p>
+               <p className="text-xs uppercase font-black text-emerald-600 tracking-wider">Monto de Cuota</p>
+               <p className="font-black text-slate-800 text-xl mt-1" suppressHydrationWarning>${formatCurrency(projection.valorCuota)}</p>
+             </div>
+           </div>
+
+           <div className="flex">
+             <div className="w-1/2">
+               <p className="text-xs uppercase font-black text-emerald-600 tracking-wider">Fecha Entrega</p>
+               <p className="font-bold text-slate-700 text-base mt-1" suppressHydrationWarning>{safeFormatDate(sol.fecha_entrega)}</p>
+             </div>
+             <div className="w-1/2 border-l border-emerald-100 pl-4">
+               <p className="text-xs uppercase font-black text-emerald-600 tracking-wider">Día 1er Cobro</p>
+               <p className="font-bold text-slate-700 text-base mt-1" suppressHydrationWarning>{safeFormatDate(sol.fecha_primer_cobro)}</p>
              </div>
            </div>
          </div>
 
-         <p className="text-xs text-slate-500 font-medium text-center mb-4">
-           Generado por: <span className="font-black text-slate-700">{sol.cobrador?.nombre}</span>
+         <p className="text-xs text-slate-500 font-medium text-center mb-5 border-t border-slate-100 pt-5">
+            Tramitado Oficialmente por el Agente: <span className="font-black text-slate-700">{sol.cobrador?.nombre}</span>
          </p>
 
          {/* Actions */}
