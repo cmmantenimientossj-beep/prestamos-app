@@ -5,8 +5,8 @@ import ApproveButton from "../ApproveButton";
 import RejectButton from "../RejectButton";
 import Link from "next/link";
 
-export default async function SolicitudEvaluationPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default async function SolicitudEvaluationPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
   const sol = await prisma.solicitudPrestamo.findUnique({
     where: { id },
