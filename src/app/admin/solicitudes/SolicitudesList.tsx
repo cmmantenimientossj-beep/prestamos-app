@@ -27,6 +27,10 @@ export default function SolicitudesList({ solicitudes }: { solicitudes: any[] })
   const cTel = activeSol ? (isNew ? activeSol.nuevo_cliente_celular : activeSol.cliente?.celular) || "N/A" : "";
   const cDir = activeSol ? (isNew ? activeSol.nuevo_cliente_direccion_personal : (activeSol.cliente?.direccion_negocio || activeSol.cliente?.direccion_personal)) || "N/A" : "";
 
+  const formatCurrency = (n: number) => {
+    return Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
   return (
     <div className="space-y-3 pb-8">
        {solicitudes.map(s => {
@@ -52,7 +56,7 @@ export default function SolicitudesList({ solicitudes }: { solicitudes: any[] })
                    </p>
                 </div>
                 <div className="text-right shrink-0 ml-2">
-                   <p className="font-black text-emerald-700 text-sm">${s.monto_solicitado.toLocaleString('es-AR')}</p>
+                   <p className="font-black text-emerald-700 text-sm" suppressHydrationWarning>${formatCurrency(s.monto_solicitado)}</p>
                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-0.5">{s.cantidad_cuotas} cuotas</p>
                 </div>
              </button>
@@ -111,7 +115,7 @@ export default function SolicitudesList({ solicitudes }: { solicitudes: any[] })
                  <div className="flex border-b border-emerald-100 pb-3">
                    <div className="w-1/2">
                      <p className="text-[10px] uppercase font-bold text-emerald-600/70">Monto Final</p>
-                     <p className="font-black text-emerald-800 text-xl">${activeSol.monto_solicitado.toLocaleString('es-AR')}</p>
+                     <p className="font-black text-emerald-800 text-xl" suppressHydrationWarning>${formatCurrency(activeSol.monto_solicitado)}</p>
                    </div>
                    <div className="w-1/2 border-l border-emerald-100 pl-4">
                      <p className="text-[10px] uppercase font-bold text-emerald-600/70">Interés Acordado</p>
