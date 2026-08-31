@@ -9,14 +9,9 @@ export default async function SolicitudesPage() {
     orderBy: { fecha_registro: 'desc' }
   });
 
-  // Sanitizamos las fechas para evitar problemas de hidratación (Next.js server to client issues)
-  const solicitudes = rawSolicitudes.map((s: any) => ({
-    ...s,
-    fecha_entrega: s.fecha_entrega.toISOString(),
-    fecha_primer_cobro: s.fecha_primer_cobro.toISOString(),
-    fecha_registro: s.fecha_registro.toISOString(),
-    cliente: s.cliente ? { ...s.cliente, fecha_registro: s.cliente.fecha_registro.toISOString() } : null,
-  }));
+  // Sanitizamos profundamente todo el árbol de datos para evitar que cualquier Fecha o
+  // objeto complejo crashee la hidratación de React y congele la página (Dead HTML).
+  const solicitudes = JSON.parse(JSON.stringify(rawSolicitudes));
 
   // Removemos la animación 'slide-in' porque al aplicar un 'transform' css en el contenedor,
   // rompe la propiedad 'fixed inset-0' del Modal hijo en algunos dispositivos.
