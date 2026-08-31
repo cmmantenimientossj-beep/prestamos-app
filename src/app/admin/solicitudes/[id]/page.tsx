@@ -1,10 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { User, FileText, MapPin, Phone, Info, ChevronLeft } from "lucide-react";
-import ApproveButton from "../ApproveButton";
-import RejectButton from "../RejectButton";
 import Link from "next/link";
 import { generatePaymentSchedule } from "@/lib/loan-calculator";
+import { approvePrestamo, rejectPrestamo } from "@/actions/prestamos";
 
 export default async function SolicitudEvaluationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -14,7 +13,7 @@ export default async function SolicitudEvaluationPage({ params }: { params: Prom
     include: { cliente: true, cobrador: true }
   });
 
-  if (!sol || sol.estado !== 'PENDIENTE') {
+  if (!sol || (sol.estado !== 'PENDIENTE' && sol.estado !== 'APROBADA')) {
     redirect("/admin/solicitudes");
   }
 
@@ -122,20 +121,50 @@ export default async function SolicitudEvaluationPage({ params }: { params: Prom
             Tramitado Oficialmente por el Agente: <span className="font-black text-slate-700">{sol.cobrador?.nombre}</span>
          </p>
 
-         {/* Actions */}
+         {/* Actions Native Forms */}
          <div className="flex flex-col gap-3">
-           <ApproveButton 
-             prestamoId={sol.id} 
-             clienteVal={cNombre} 
-             cobradorNum={cTel} 
-             monto={sol.monto_solicitado} 
-             cuotas={sol.cantidad_cuotas} 
-             modalidad={sol.modalidad}
-           />
-           <RejectButton
-             prestamoId={sol.id}
-             cobradorCelular={sol.cobrador?.celular || ""}
-           />
+           {sol.estado === 'PENDIENTE' ? (
+              <>
+                <form action={async () => {
+                   "use server";
+                   await approvePrestamo(sol.id);
+                }}>
+                   <button 
+                     type="submit"
+                     className="bg-emerald-600 text-white w-full px-5 py-4 rounded-xl text-sm font-black shadow-md hover:bg-emerald-500 transition-colors uppercase tracking-widest"
+                   >
+                     Aprobar y Cargar Crédito Oficial
+                   </button>
+                </form>
+                <form action={async () => {
+                   "use server";
+                   await rejectPrestamo(sol.id, "Rechazado Administrativamente");
+                }}>
+                   <button 
+                     type="submit"
+                     className="bg-white border-2 border-red-100 text-red-600 w-full px-5 py-3 rounded-xl text-xs font-bold hover:bg-red-50 transition-colors uppercase tracking-widest"
+                   >
+                     Rechazar y Archivar
+                   </button>
+                </form>
+              </>
+           ) : (
+              <div className="flex flex-col gap-2 mt-4">
+                 <div className="bg-emerald-100/50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-inner">
+                    <span className="font-black flex items-center gap-2 text-lg"><Info size={20}/> ¡Solicitud Aprobada y Creada Exitosamente!</span>
+                    <p className="text-emerald-700/80 font-bold text-xs uppercase tracking-widest text-center mt-1">El expediente se convirtió en un crédito activo</p>
+                 </div>
+                 
+                 <a 
+                   href={`https://wa.me/${cTel}?text=${encodeURIComponent(`Hola ${cNombre}, tu solicitud de préstamo con RYB por $${sol.monto_solicitado.toLocaleString('es-AR')} en ${sol.cantidad_cuotas} cuotas (${sol.modalidad}) ha sido APROBADA y el crédito ya fue cargado. ¡Gracias por elegirnos!`)}`} 
+                   target="_blank" 
+                   rel="noreferrer" 
+                   className="bg-emerald-600 text-white w-full py-4 rounded-xl font-black shadow-lg hover:bg-emerald-500 transition-colors flex items-center justify-center gap-2 uppercase tracking-wide text-sm"
+                 >
+                    Informar al Cliente Inmediatamente por WhatsApp
+                 </a>
+              </div>
+           )}
          </div>
       </div>
     </div>
