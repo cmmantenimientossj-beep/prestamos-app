@@ -6,13 +6,13 @@ export default async function ClientesPage() {
     include: {
       _count: {
         select: {
-          prestamos: { where: { estado: 'ACTIVO' } }
+          prestamos: true // This gets the total count of all loans
         }
       },
-      // Hack to see if they have any active Mora quickly
+      // We also need to get loans specifically to check for active/mora and count them easily. Let's select all 'ACTIVO' or 'MORA' loans
       prestamos: {
-        where: { estado: 'MORA' },
-        take: 1
+        where: { estado: { in: ['ACTIVO', 'MORA'] } },
+        select: { estado: true }
       }
     },
     orderBy: { nombre_apellido: 'asc' }

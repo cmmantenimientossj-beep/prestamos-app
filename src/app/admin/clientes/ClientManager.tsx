@@ -8,6 +8,7 @@ import Link from "next/link";
 export default function ClientManager({ initialClientes }: { initialClientes: any[] }) {
   const [clientes, setClientes] = useState(initialClientes);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"todos" | "con-credito-activo" | "sin-credito-activo" | "inactivos">("todos");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -19,10 +20,19 @@ export default function ClientManager({ initialClientes }: { initialClientes: an
   const [direccionNegocio, setDireccionNegocio] = useState("");
   const [nombreNegocio, setNombreNegocio] = useState("");
 
-  const filteredClientes = clientes.filter(c => 
-    c.nombre_apellido.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    c.dni.includes(searchTerm)
-  );
+  const filteredClientes = clientes.filter(c => {
+    const matchesSearch = c.nombre_apellido.toLowerCase().includes(searchTerm.toLowerCase()) || c.dni.includes(searchTerm);
+    if (!matchesSearch) return false;
+
+    const hasActive = c.prestamos && c.prestamos.length > 0;
+    const totalLoans = c._count?.prestamos || 0;
+
+    if (filterStatus === "con-credito-activo") return hasActive;
+    if (filterStatus === "sin-credito-activo") return !hasActive && totalLoans > 0;
+    if (filterStatus === "inactivos") return totalLoans === 0;
+    
+    return true; // todos
+  });
 
   const handleDelete = async (id: string, nombre: string) => {
     if (!window.confirm(`¿Seguro que deseas eliminar a ${nombre}?`)) return;
@@ -61,24 +71,51 @@ export default function ClientManager({ initialClientes }: { initialClientes: an
 
   return (
     <>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 relative z-20">
         <div>
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Directorio de Clientes</h1>
           <p className="text-slate-500 mt-1">Gestiona los clientes y su historial crediticio</p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white hover:bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl border border-slate-200 transition-colors shadow-sm">
+          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white hover:bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl border border-slate-200 transition-colors shadow-sm pointer-events-auto">
             <Download size={18} />
             <span>Exportar</span>
           </button>
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl transition-colors shadow-md shadow-emerald-600/20 font-medium"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl transition-colors shadow-md shadow-emerald-600/20 font-medium pointer-events-auto cursor-pointer"
           >
             <Plus size={18} />
             <span>Alta de Cliente</span>
           </button>
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-6">
+        <button 
+          onClick={() => setFilterStatus("todos")}
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${filterStatus === "todos" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+        >
+          Todos
+        </button>
+        <button 
+          onClick={() => setFilterStatus("con-credito-activo")}
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${filterStatus === "con-credito-activo" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+        >
+          Con crédito activo
+        </button>
+        <button 
+          onClick={() => setFilterStatus("sin-credito-activo")}
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${filterStatus === "sin-credito-activo" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+        >
+          Sin crédito activo
+        </button>
+        <button 
+          onClick={() => setFilterStatus("inactivos")}
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${filterStatus === "inactivos" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+        >
+          Inactivos
+        </button>
       </div>
 
       <div className="bg-white border border-slate-200 p-4 rounded-2xl mb-6 flex gap-4 shadow-sm">
@@ -108,8 +145,9 @@ export default function ClientManager({ initialClientes }: { initialClientes: an
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredClientes.map((client) => {
-                const isMora = client.prestamos && client.prestamos.length > 0;
-                const status = isMora ? 'Mora' : (client._count.prestamos > 0 ? 'Al día' : 'Cerrado');
+                const isMora = client.prestamos?.some((p: any) => p.estado === 'MORA');
+                const hasActive = client.prestamos && client.prestamos.length > 0;
+                const status = isMora ? 'Mora' : (hasActive ? 'Al día' : 'Cerrado');
 
                 return (
                   <tr key={client.id} className="hover:bg-slate-50 transition-colors group">
