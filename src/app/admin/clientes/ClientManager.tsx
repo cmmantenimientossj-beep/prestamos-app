@@ -71,7 +71,7 @@ export default function ClientManager({ initialClientes }: { initialClientes: an
 
   return (
     <>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 relative z-20">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 relative z-40">
         <div>
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Directorio de Clientes</h1>
           <p className="text-slate-500 mt-1">Gestiona los clientes y su historial crediticio</p>
@@ -91,28 +91,31 @@ export default function ClientManager({ initialClientes }: { initialClientes: an
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 w-full relative z-40" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
+        <style>{`
+          .flex.gap-2.mb-6.overflow-x-auto::-webkit-scrollbar { display: none; }
+        `}</style>
         <button 
           onClick={() => setFilterStatus("todos")}
-          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${filterStatus === "todos" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 ${filterStatus === "todos" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
         >
           Todos
         </button>
         <button 
           onClick={() => setFilterStatus("con-credito-activo")}
-          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${filterStatus === "con-credito-activo" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 ${filterStatus === "con-credito-activo" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
         >
           Con crédito activo
         </button>
         <button 
           onClick={() => setFilterStatus("sin-credito-activo")}
-          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${filterStatus === "sin-credito-activo" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 ${filterStatus === "sin-credito-activo" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
         >
           Sin crédito activo
         </button>
         <button 
           onClick={() => setFilterStatus("inactivos")}
-          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${filterStatus === "inactivos" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 ${filterStatus === "inactivos" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
         >
           Inactivos
         </button>
