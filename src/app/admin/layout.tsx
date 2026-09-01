@@ -28,7 +28,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <div className="flex flex-col md:flex-row h-screen bg-slate-50 text-slate-800 font-sans overflow-hidden">
       
       {/* Desktop Sidebar (hidden on mobile) */}
-      <aside className="w-64 bg-white p-6 flex-col justify-between hidden md:flex border-r border-slate-200">
+      <aside className="w-64 bg-white p-6 justify-between hidden md:flex flex-col border-r border-slate-200 relative z-50 shadow-[4px_0_24px_-10px_rgba(0,0,0,0.1)]">
         <div>
           <div className="mb-8">
             <h1 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-emerald-500 to-emerald-700">
@@ -53,12 +53,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </nav>
         </div>
         <div className="mt-8 flex gap-2">
-          <div className="bg-slate-100 rounded-xl flex items-center justify-center p-2">
+          <div className="bg-slate-100 rounded-xl flex items-center justify-center p-2 relative z-50">
             <NotificationBell />
           </div>
           <button 
             onClick={handleLogout}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all"
+            title="Cerrar sesión"
           >
             <LogOut size={20} />
             <span className="font-medium hidden lg:inline">Salir</span>
@@ -67,13 +68,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Mobile Top Header (only on mobile) */}
-      <header className="md:hidden bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-30 flex justify-between items-center rounded-b-2xl">
+      <header className="md:hidden bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-50 flex justify-between items-center rounded-b-2xl relative">
         <h1 className="font-bold text-xl tracking-tight">RYB Admin</h1>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center relative z-50">
            <NotificationBell />
            <button 
              onClick={handleLogout}
-             className="p-2 bg-emerald-700/60 rounded-full hover:bg-emerald-800/80 transition-colors"
+             className="p-2 bg-emerald-700/60 rounded-full hover:bg-emerald-800/80 transition-colors pointer-events-auto"
              title="Cerrar sesión"
            >
              <LogOut size={18} />
