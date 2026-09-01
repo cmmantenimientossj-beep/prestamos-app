@@ -77,7 +77,7 @@ export default function NotificationDropdown({ usuarioId, role, cobradoresDispon
       {open && (
          <>
            <div className="fixed inset-0 z-40 bg-slate-900/10 backdrop-blur-sm" onClick={() => setOpen(false)}></div>
-           <div className="absolute right-0 top-12 sm:top-10 mt-2 w-[90vw] sm:w-[400px] max-w-[400px] bg-white rounded-3xl shadow-2xl border border-slate-100 z-50 overflow-hidden flex flex-col max-h-[80vh] sm:max-h-[500px] pb-4 animate-in slide-in-from-top-4 duration-200">
+           <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 -translate-x-1/2 sm:translate-x-0 top-20 sm:top-10 mt-0 sm:mt-2 w-[95vw] sm:w-[400px] max-w-[400px] bg-white rounded-3xl shadow-2xl border border-slate-100 z-50 overflow-hidden flex flex-col max-h-[80vh] sm:max-h-[500px] pb-4 animate-in slide-in-from-top-4 duration-200">
              
              {/* Header */}
              <div className="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center z-10 sticky top-0">
