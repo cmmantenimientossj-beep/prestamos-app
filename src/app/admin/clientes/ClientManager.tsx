@@ -91,37 +91,37 @@ export default function ClientManager({ initialClientes }: { initialClientes: an
         </div>
       </div>
 
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 w-full relative z-40" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 w-full relative z-40 pointer-events-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
         <style>{`
           .flex.gap-2.mb-6.overflow-x-auto::-webkit-scrollbar { display: none; }
         `}</style>
         <button 
           onClick={() => setFilterStatus("todos")}
-          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 ${filterStatus === "todos" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 pointer-events-auto cursor-pointer ${filterStatus === "todos" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
         >
           Todos
         </button>
         <button 
           onClick={() => setFilterStatus("con-credito-activo")}
-          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 ${filterStatus === "con-credito-activo" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 pointer-events-auto cursor-pointer ${filterStatus === "con-credito-activo" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
         >
           Con crédito activo
         </button>
         <button 
           onClick={() => setFilterStatus("sin-credito-activo")}
-          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 ${filterStatus === "sin-credito-activo" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 pointer-events-auto cursor-pointer ${filterStatus === "sin-credito-activo" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
         >
           Sin crédito activo
         </button>
         <button 
           onClick={() => setFilterStatus("inactivos")}
-          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 ${filterStatus === "inactivos" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 pointer-events-auto cursor-pointer ${filterStatus === "inactivos" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
         >
           Inactivos
         </button>
       </div>
 
-      <div className="bg-white border border-slate-200 p-4 rounded-2xl mb-6 flex gap-4 shadow-sm">
+      <div className="bg-white border border-slate-200 p-4 rounded-2xl mb-6 flex gap-4 shadow-sm relative z-40 pointer-events-auto">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
           <input 
@@ -134,7 +134,7 @@ export default function ClientManager({ initialClientes }: { initialClientes: an
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm relative z-40 pointer-events-auto">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
