@@ -69,3 +69,39 @@ export async function getDashboardMetrics() {
     rendiciones,
   };
 }
+
+// ---- Nuevas Funciones de Capital y Gastos ----
+
+export async function getCapitalInvertido() {
+  const config = await prisma.configuracion.findUnique({
+    where: { clave: 'capital_invertido' }
+  });
+  return config ? parseFloat(config.valor) : 0;
+}
+
+export async function setCapitalInvertido(monto: number) {
+  await prisma.configuracion.upsert({
+    where: { clave: 'capital_invertido' },
+    update: { valor: monto.toString() },
+    create: { clave: 'capital_invertido', valor: monto.toString() }
+  });
+}
+
+export async function getGastosAllTime() {
+  const sum = await prisma.gasto.aggregate({
+    _sum: {
+      monto: true,
+    }
+  });
+  return sum._sum.monto || 0;
+}
+
+export async function addGasto(motivo: string, monto: number) {
+  await prisma.gasto.create({
+    data: {
+      motivo,
+      monto,
+    }
+  });
+}
+

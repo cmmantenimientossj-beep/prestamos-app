@@ -154,3 +154,15 @@ model Notificacion {
 
   usuario     Usuario  @relation(fields: [usuario_id], references: [id])
 }
+
+model Configuracion {
+  clave String @id
+  valor String
+}
+
+model Gasto {
+  id      String   @id @default(uuid())
+  fecha   DateTime @default(now())
+  motivo  String
+  monto   Float
+}
