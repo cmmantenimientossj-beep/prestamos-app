@@ -81,9 +81,13 @@ export default function ClientLayout({ children, notificationBell }: { children:
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 pb-36 md:pb-8">
-        <div className="max-w-7xl mx-auto h-full">
-          {children}
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50">
+        <div className="max-w-7xl mx-auto min-h-full flex flex-col">
+          <div className="flex-1">
+            {children}
+          </div>
+          {/* Explicit spacer for mobile bottom navigation to ensure last element is fully visible */}
+          <div className="h-[140px] shrink-0 w-full md:hidden"></div>
         </div>
       </main>
 
