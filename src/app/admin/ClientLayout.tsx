@@ -11,11 +11,10 @@ export default function ClientLayout({ children, notificationBell }: { children:
   const pathname = usePathname();
 
   const links = [
-    { name: "Solicitudes", href: "/admin/solicitudes", icon: ClipboardList },
+    { name: "Dashboard", href: "/admin/resumen", icon: LayoutDashboard },
     { name: "Clientes", href: "/admin/clientes", icon: Users },
     { name: "Cobradores", href: "/admin/cobradores", icon: UserCog },
     { name: "Recaudaciones", href: "/admin/recaudaciones", icon: DollarSign },
-    { name: "Resumen", href: "/admin/resumen", icon: LayoutDashboard },
   ];
 
   const handleLogout = async () => {

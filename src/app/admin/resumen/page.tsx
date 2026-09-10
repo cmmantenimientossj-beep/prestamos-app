@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
+import Link from "next/link";
 import { 
   ChartClientesPorDia, 
   ChartValorPrestadoPorDia, 
   ChartPrestamosPorDia, 
   ChartPagosYMontosPorDia 
 } from "./DashboardCharts";
-import { TrendingUp, Users, Wallet, CreditCard, Activity, CalendarDays, Briefcase } from "lucide-react";
+import { TrendingUp, Users, Wallet, CreditCard, Activity, CalendarDays, Briefcase, ClipboardList, ArrowRight } from "lucide-react";
 import { startOfMonth, subDays, format } from "date-fns";
 import { getCapitalInvertido, getGastosAllTime } from "@/actions/admin";
 import { FinanzasEditors } from "./FinanzasEditors";
@@ -144,6 +145,25 @@ export default async function ResumenPage() {
       </div>
       
       <FinanzasEditors currentCapital={capitalInvertido} />
+
+      {/* Accesos Rápidos */}
+      <div className="mb-6">
+        <h2 className="text-lg font-bold flex items-center gap-2 mb-4 text-slate-800"><Activity size={18} className="text-emerald-500" /> Accesos Rápidos</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link href="/admin/solicitudes" className="group p-5 bg-white border border-slate-200 hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/10 rounded-2xl transition-all flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl group-hover:scale-110 transition-transform">
+                <ClipboardList size={24} />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800">Solicitudes</h3>
+                <p className="text-xs text-slate-500">Gestionar préstamos web</p>
+              </div>
+            </div>
+            <ArrowRight size={20} className="text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+          </Link>
+        </div>
+      </div>
       
       {/* Estado del Negocio Global */}
       <div className="mb-6 p-6 bg-gradient-to-br from-blue-900 to-slate-900 rounded-3xl text-white shadow-xl">
