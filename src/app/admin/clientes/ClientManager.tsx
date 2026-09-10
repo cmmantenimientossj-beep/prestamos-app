@@ -134,60 +134,60 @@ export default function ClientManager({ initialClientes }: { initialClientes: an
         </div>
       </div>
 
-      <div className="bg-white border text-center border-slate-200 rounded-2xl overflow-hidden shadow-sm relative z-40 pointer-events-auto p-2 pb-6">
-        <div className="overflow-x-auto w-full flex justify-center">
-          <table className="w-full text-left border-separate border-spacing-y-2.5 min-w-[700px] px-2 md:px-4">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm relative z-40 pointer-events-auto">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
-              <tr className="text-slate-500 text-sm uppercase tracking-wider font-semibold">
-                <th className="px-6 py-2">Cliente / DNI</th>
-                <th className="px-4 py-2">Contacto</th>
-                <th className="px-4 py-2">Negocio</th>
-                <th className="px-4 py-2">Estado</th>
-                <th className="px-6 py-2 text-right">Historial</th>
+              <tr className="bg-slate-50/50 border-b border-slate-200 text-slate-500 text-sm uppercase tracking-wider font-semibold">
+                <th className="p-4">Cliente / DNI</th>
+                <th className="p-4">Contacto</th>
+                <th className="p-4">Negocio</th>
+                <th className="p-4">Estado</th>
+                <th className="p-4 text-right">Historial</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {filteredClientes.map((client) => {
                 const isMora = client.prestamos?.some((p: any) => p.estado === 'MORA');
                 const hasActive = client.prestamos && client.prestamos.length > 0;
                 const status = isMora ? 'Mora' : (hasActive ? 'Al día' : 'Cerrado');
 
                 return (
-                  <tr key={client.id} className="group shadow-sm hover:shadow-md transition-all">
-                    <td className="p-4 pl-6 bg-sky-50/60 group-hover:bg-sky-100/60 rounded-l-[2rem] transition-colors">
+                  <tr key={client.id} className="hover:bg-slate-50 transition-colors group">
+                    <td className="p-4">
                       <p className="font-bold text-slate-800 text-base">{client.nombre_apellido}</p>
                       <p className="text-xs text-slate-500 mt-1 font-mono">{client.dni}</p>
                     </td>
-                    <td className="p-4 bg-sky-50/60 group-hover:bg-sky-100/60 text-slate-600 text-sm transition-colors">
+                    <td className="p-4 text-slate-600 text-sm">
                       <p>{client.celular || 'Sin celular'}</p>
                       <p className="text-xs text-slate-400 truncate max-w-[150px]">{client.direccion_personal || 'Sin dir. personal'}</p>
                     </td>
-                    <td className="p-4 bg-sky-50/60 group-hover:bg-sky-100/60 text-slate-600 text-sm transition-colors">
+                    <td className="p-4 text-slate-600 text-sm">
                       <p className="font-medium">{client.nombre_negocio || 'Particular'}</p>
                       <p className="text-xs text-slate-400 truncate max-w-[150px]">{client.direccion_negocio || 'Sin dir. comercial'}</p>
                     </td>
-                    <td className="p-4 bg-sky-50/60 group-hover:bg-sky-100/60 transition-colors">
+                    <td className="p-4">
                       <div className="flex flex-col gap-1 items-start">
                          <p className="text-xs font-semibold flex items-center gap-1.5">
                            <span className={`w-2 h-2 rounded-full ${status === 'Al día' ? 'bg-emerald-500' : status === 'Mora' ? 'bg-red-500 animate-pulse' : 'bg-slate-400'}`}></span>
                            <span className={status === 'Mora' ? 'text-red-600' : status === 'Al día' ? 'text-emerald-700' : 'text-slate-500'}>{status}</span>
                          </p>
-                         <span className="bg-white/80 border border-sky-100 text-slate-600 px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider">
+                         <span className="bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider">
                            {client._count.prestamos} Préstamos
                          </span>
                       </div>
                     </td>
-                    <td className="p-4 pr-6 bg-sky-50/60 group-hover:bg-sky-100/60 text-right align-middle rounded-r-[2rem] transition-colors">
+                    <td className="p-4 text-right align-middle">
                       <div className="flex justify-end gap-2">
                         <Link 
                           href={`/admin/clientes/${client.id}`}
-                          className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 rounded-full transition-colors flex items-center gap-1.5 font-semibold text-xs border border-blue-100 shadow-sm"
+                          className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 rounded-lg transition-colors flex items-center gap-1.5 font-semibold text-xs border border-blue-100 shadow-sm"
                         >
                           <Eye size={16} /> Ver
                         </Link>
                         <button 
                           onClick={() => handleDelete(client.id, client.nombre_apellido)}
-                          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                           title="Eliminar Cliente"
                         >
                           <Trash2 size={18} />
