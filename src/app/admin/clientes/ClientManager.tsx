@@ -134,76 +134,84 @@ export default function ClientManager({ initialClientes }: { initialClientes: an
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm relative z-40 pointer-events-auto">
+      <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm relative z-40 pointer-events-auto p-4">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[700px]">
-            <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-200 text-slate-500 text-sm uppercase tracking-wider font-semibold">
-                <th className="p-4">Cliente / DNI</th>
-                <th className="p-4">Contacto</th>
-                <th className="p-4">Negocio</th>
-                <th className="p-4">Estado</th>
-                <th className="p-4 text-right">Historial</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredClientes.map((client) => {
-                const isMora = client.prestamos?.some((p: any) => p.estado === 'MORA');
-                const hasActive = client.prestamos && client.prestamos.length > 0;
-                const status = isMora ? 'Mora' : (hasActive ? 'Al día' : 'Cerrado');
+          <div className="min-w-[850px] flex flex-col gap-3 py-2">
+            
+            {/* Encabezado */}
+            <div className="flex text-slate-500 text-sm uppercase tracking-wider font-semibold px-8 mb-2">
+               <div className="w-[30%]">Cliente / DNI</div>
+               <div className="w-[20%]">Contacto</div>
+               <div className="w-[20%]">Negocio</div>
+               <div className="w-[15%]">Estado</div>
+               <div className="w-[15%] text-right pr-6">Acción</div>
+            </div>
 
-                return (
-                  <tr key={client.id} className="hover:bg-slate-50 transition-colors group">
-                    <td className="p-4">
-                      <p className="font-bold text-slate-800 text-base">{client.nombre_apellido}</p>
-                      <p className="text-xs text-slate-500 mt-1 font-mono">{client.dni}</p>
-                    </td>
-                    <td className="p-4 text-slate-600 text-sm">
-                      <p>{client.celular || 'Sin celular'}</p>
-                      <p className="text-xs text-slate-400 truncate max-w-[150px]">{client.direccion_personal || 'Sin dir. personal'}</p>
-                    </td>
-                    <td className="p-4 text-slate-600 text-sm">
-                      <p className="font-medium">{client.nombre_negocio || 'Particular'}</p>
-                      <p className="text-xs text-slate-400 truncate max-w-[150px]">{client.direccion_negocio || 'Sin dir. comercial'}</p>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex flex-col gap-1 items-start">
-                         <p className="text-xs font-semibold flex items-center gap-1.5">
-                           <span className={`w-2 h-2 rounded-full ${status === 'Al día' ? 'bg-emerald-500' : status === 'Mora' ? 'bg-red-500 animate-pulse' : 'bg-slate-400'}`}></span>
-                           <span className={status === 'Mora' ? 'text-red-600' : status === 'Al día' ? 'text-emerald-700' : 'text-slate-500'}>{status}</span>
-                         </p>
-                         <span className="bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider">
-                           {client._count.prestamos} Préstamos
-                         </span>
-                      </div>
-                    </td>
-                    <td className="p-4 text-right align-middle">
-                      <div className="flex justify-end gap-2">
-                        <Link 
-                          href={`/admin/clientes/${client.id}`}
-                          className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 rounded-lg transition-colors flex items-center gap-1.5 font-semibold text-xs border border-blue-100 shadow-sm"
-                        >
-                          <Eye size={16} /> Ver
-                        </Link>
-                        <button 
-                          onClick={() => handleDelete(client.id, client.nombre_apellido)}
-                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Eliminar Cliente"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filteredClientes.length === 0 && (
-                <tr>
-                   <td colSpan={5} className="p-8 text-center text-slate-500">No se encontraron clientes. Usa el buscador o registra uno nuevo.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+            {/* Filas en forma de píldora azul */}
+            {filteredClientes.map((client) => {
+              const isMora = client.prestamos?.some((p: any) => p.estado === 'MORA');
+              const hasActive = client.prestamos && client.prestamos.length > 0;
+              const status = isMora ? 'Mora' : (hasActive ? 'Al día' : 'Cerrado');
+
+              return (
+                <div 
+                  key={client.id} 
+                  className="flex items-center bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-full px-6 py-2.5 shadow-md shadow-cyan-900/10 hover:shadow-lg hover:scale-[1.01] transition-all cursor-pointer group"
+                >
+                  {/* Cliente */}
+                  <div className="w-[30%] pr-4 border-r border-white/20">
+                    <p className="font-bold text-base drop-shadow-sm line-clamp-1">{client.nombre_apellido}</p>
+                    <p className="text-xs text-blue-100 font-mono mt-0.5">{client.dni}</p>
+                  </div>
+
+                  {/* Contacto */}
+                  <div className="w-[20%] px-4 border-r border-white/20">
+                    <p className="font-semibold text-sm drop-shadow-sm line-clamp-1">{client.celular || 'Sin celular'}</p>
+                    <p className="text-xs text-blue-100 truncate mt-0.5" title={client.direccion_personal}>{client.direccion_personal || 'Sin dir. personal'}</p>
+                  </div>
+
+                  {/* Negocio */}
+                  <div className="w-[20%] px-4 border-r border-white/20">
+                    <p className="font-semibold text-sm drop-shadow-sm line-clamp-1">{client.nombre_negocio || 'Particular'}</p>
+                    <p className="text-xs text-blue-100 truncate mt-0.5" title={client.direccion_negocio}>{client.direccion_negocio || 'Sin dir. comercial'}</p>
+                  </div>
+
+                  {/* Estado */}
+                  <div className="w-[15%] px-4">
+                    <div className="flex flex-col gap-1 items-start">
+                       <p className="text-xs font-semibold flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full w-fit">
+                         <span className={`w-2 h-2 rounded-full ${status === 'Al día' ? 'bg-emerald-400' : status === 'Mora' ? 'bg-red-400 animate-pulse' : 'bg-slate-300'}`}></span>
+                         <span>{status}</span>
+                       </p>
+                    </div>
+                  </div>
+
+                  {/* Acciones */}
+                  <div className="w-[15%] pl-4 flex justify-end items-center gap-2 pr-1">
+                    <Link 
+                      href={`/admin/clientes/${client.id}`}
+                      className="px-4 py-1.5 bg-white text-blue-600 hover:bg-slate-50 hover:text-blue-700 rounded-full transition-colors font-bold text-xs shadow-sm flex items-center justify-center flex-1 max-w-[90px]"
+                    >
+                      VER
+                    </Link>
+                    <button 
+                      onClick={() => handleDelete(client.id, client.nombre_apellido)}
+                      className="p-1.5 text-blue-100 hover:text-red-300 hover:bg-white/10 rounded-full transition-colors"
+                      title="Eliminar Cliente"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {filteredClientes.length === 0 && (
+              <div className="p-8 text-center text-slate-500 bg-slate-50 rounded-2xl w-full">
+                 No se encontraron clientes. Usa el buscador o registra uno nuevo.
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
