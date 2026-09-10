@@ -192,3 +192,60 @@ export async function rejectPrestamo(id: string, motivo: string) {
     return { success: false, error: error.message || "Fallo interno al rechazar" };
   }
 }
+
+export async function updatePrestamoDates(prestamoId: string, nuevaFechaEntrega: Date, nuevaFechaPrimerCobro: Date) {
+  try {
+    const prestamo = await prisma.prestamo.findUnique({
+      where: { id: prestamoId },
+      include: { cuotas: { orderBy: { numero_cuota: 'asc' } } }
+    });
+
+    if (!prestamo) {
+      throw new Error("Préstamo no encontrado");
+    }
+
+    const { cuotas } = generatePaymentSchedule({
+      monto_solicitado: prestamo.monto_solicitado,
+      porcentaje_interes: prestamo.porcentaje_interes,
+      cantidad_cuotas: prestamo.cantidad_cuotas,
+      modalidad: prestamo.modalidad as ModalidadPrestamo,
+      fecha_inicio: nuevaFechaPrimerCobro,
+    });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.prestamo.update({
+        where: { id: prestamoId },
+        data: {
+          fecha_entrega: nuevaFechaEntrega,
+          fecha_primer_cobro: nuevaFechaPrimerCobro
+        }
+      });
+      
+      for (let c of prestamo.cuotas) {
+         const regeneratedCuota = cuotas.find(x => x.numero_cuota === c.numero_cuota);
+         if (regeneratedCuota) {
+           await tx.cuota.update({
+              where: { id: c.id },
+              data: { fecha_vencimiento: regeneratedCuota.fecha_vencimiento }
+           });
+         }
+      }
+      
+      await tx.auditLog.create({
+        data: {
+          usuario_id: prestamo.cobrador_id,
+          accion: "EDITAR_FECHAS_PRESTAMO",
+          entidad_afectada: `Prestamo_${prestamo.id}`,
+          valores_nuevos: JSON.stringify({ nuevaEntrega: nuevaFechaEntrega, nuevoInicio: nuevaFechaPrimerCobro }),
+        }
+      });
+    });
+
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating prestamo dates:", error);
+    return { success: false, error: error.message || "Error al actualizar las fechas" };
+  }
+}
+
