@@ -14,6 +14,7 @@ export default function ClientLayout({ children, notificationBell }: { children:
     { name: "Dashboard", href: "/admin/resumen", icon: LayoutDashboard },
     { name: "Clientes", href: "/admin/clientes", icon: Users },
     { name: "Cobradores", href: "/admin/cobradores", icon: UserCog },
+    { name: "Agenda", href: "/admin/cobro-semanal", icon: ClipboardList },
     { name: "Recaudaciones", href: "/admin/recaudaciones", icon: DollarSign },
   ];
 
