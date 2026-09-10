@@ -52,8 +52,8 @@ export default function LoginPage() {
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 cursor-text" size={20} />
             <input 
-              type="email" 
-              placeholder="Correo electrónico" 
+              type="text" 
+              placeholder="Usuario o correo electrónico" 
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
