@@ -10,6 +10,7 @@ import { TrendingUp, Users, Wallet, CreditCard, Activity, CalendarDays, Briefcas
 import { startOfMonth, subDays, format } from "date-fns";
 import { getCapitalInvertido, getGastosAllTime } from "@/actions/admin";
 import { FinanzasEditors } from "./FinanzasEditors";
+import { GananciasClientModal } from "./GananciasClientModal";
 
 export const dynamic = "force-dynamic";
 
@@ -58,53 +59,54 @@ export default async function ResumenPage() {
 
   const gananciaPeriodo = totalInteresCobradoMes + moraCobradaMes;
 
-  // -- NEW: HISTORICAL DATA FOR CAJA --
-  const todasLasCuotasConPagos = await prisma.cuota.findMany({
-    where: { monto_pagado: { gt: 0 } },
-    include: { prestamo: true }
-  });
-  
-  let capitalHistoricoDevuelto = 0;
-  let interesHistoricoCobrado = 0;
-  let moraHistoricaCobrada = 0;
-  
-  for (const cuota of todasLasCuotasConPagos) {
-    const cuotasTotales = cuota.prestamo.cantidad_cuotas;
-    const capOrig = cuota.prestamo.monto_solicitado / cuotasTotales;
-    const intOrig = (cuota.prestamo.monto_total_a_devolver - cuota.prestamo.monto_solicitado) / cuotasTotales;
-    const valorBaseCuota = capOrig + intOrig;
-
-    let moraCobrada = 0;
-    let pagoBase = cuota.monto_pagado;
-
-    if (cuota.interes_mora_aplicado > 0) {
-      if (pagoBase > valorBaseCuota) {
-        moraCobrada = Math.min(pagoBase - valorBaseCuota, cuota.interes_mora_aplicado);
-        pagoBase = pagoBase - moraCobrada;
-      }
-    }
-
-    const fraccion = pagoBase / valorBaseCuota;
-    
-    capitalHistoricoDevuelto += capOrig * Math.min(fraccion, 1);
-    interesHistoricoCobrado += intOrig * Math.min(fraccion, 1);
-    moraHistoricaCobrada += moraCobrada;
-  }
-  
-  const totalPrestadoAllTime = prestamosActivos.reduce((acc, p) => acc + p.monto_solicitado, 0);
-
+  // -- NEW: ACCRUAL ACCOUNTING (DEVENGO) FOR CAJA --
   const todosLosPrestamos = await prisma.prestamo.findMany({
-     select: { monto_solicitado: true }
+     include: { cliente: true, cuotas: true }
   });
-  const totalInyectadoHistorico = todosLosPrestamos.reduce((acc, p) => acc + p.monto_solicitado, 0);
+
+  let gananciaBrutaEsperada = 0;
+  let totalInyectadoHistorico = 0;
+  let moraHistoricaCobrada = 0;
+  let totalCobradoHistorial = 0;
+  let totalADevolverGlobal = 0;
   
-  const circulante = totalInyectadoHistorico - capitalHistoricoDevuelto;
-  const gananciasHistoricas = interesHistoricoCobrado + moraHistoricaCobrada;
+  const clientProfits: Record<string, { nombre: string, ganancia: number }> = {};
+
+  todosLosPrestamos.forEach(prestamo => {
+      totalInyectadoHistorico += prestamo.monto_solicitado;
+      totalADevolverGlobal += prestamo.monto_total_a_devolver;
+      
+      let moraPrestamo = 0;
+      let cobradoPrestamo = 0;
+      prestamo.cuotas.forEach(cuota => {
+         cobradoPrestamo += cuota.monto_pagado;
+         moraPrestamo += (cuota.interes_mora_aplicado || 0);
+      });
+
+      totalCobradoHistorial += cobradoPrestamo;
+      moraHistoricaCobrada += moraPrestamo;
+
+      // Según Contabilidad Devengada: Toda la ganancia esperada impacta instantaneamente el patrimonio.
+      const gananciaNetaPrestamo = (prestamo.monto_total_a_devolver - prestamo.monto_solicitado) + moraPrestamo;
+      gananciaBrutaEsperada += gananciaNetaPrestamo;
+
+      if (!clientProfits[prestamo.cliente_id]) {
+          clientProfits[prestamo.cliente_id] = { nombre: prestamo.cliente.nombre_apellido, ganancia: 0 };
+      }
+      clientProfits[prestamo.cliente_id].ganancia += gananciaNetaPrestamo;
+  });
+
+  const gananciasBrutas = gananciaBrutaEsperada; 
   
-  const capitalInvertido = await getCapitalInvertido();
+  let capitalInvertido = await getCapitalInvertido();
+  if (capitalInvertido === 0) capitalInvertido = 5000000; // Parametro default pedido por el usuario
+  
   const gastosAllTime = await getGastosAllTime();
   
-  const patrimonioOperativo = capitalInvertido + gananciasHistoricas - gastosAllTime;
+  const patrimonioOperativo = capitalInvertido + gananciasBrutas - gastosAllTime;
+  
+  // Circulante = Toda la deuda (incluye mora) menos lo que ya pagaron físicamente
+  const circulante = (totalADevolverGlobal + moraHistoricaCobrada) - totalCobradoHistorial;
   const enCaja = patrimonioOperativo - circulante;
 
   // Time-Series Data Aggregation (Last 30 Days)
@@ -172,6 +174,19 @@ export default async function ResumenPage() {
             </div>
             <ArrowRight size={20} className="text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
           </Link>
+
+          <Link href="/admin/comisiones" className="group p-5 bg-white border border-slate-200 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10 rounded-2xl transition-all flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
+                <Wallet size={24} />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800">Comisiones</h3>
+                <p className="text-xs text-slate-500">Gestor de comisiones</p>
+              </div>
+            </div>
+            <ArrowRight size={20} className="text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
+          </Link>
         </div>
       </div>
       
@@ -183,10 +198,12 @@ export default async function ResumenPage() {
                <span className="text-blue-300 text-[10px] font-bold uppercase tracking-widest mb-1 block">Fondo Invertido</span>
                <span className="text-xl font-bold block">${capitalInvertido.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
             </div>
-            <div className="p-4 bg-white/5 rounded-2xl border border-emerald-500/20">
-               <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-widest mb-1 block">Ganancias Históricas</span>
-               <span className="text-xl font-bold block">${gananciasHistoricas.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
-            </div>
+            
+            <GananciasClientModal 
+               gananciasPrincipales={gananciasBrutas} 
+               clientesGanancias={Object.values(clientProfits)} 
+            />
+            
             <div className="p-4 bg-indigo-500/20 rounded-2xl border border-indigo-500/30">
                <span className="text-indigo-300 text-[10px] font-bold uppercase tracking-widest mb-1 block">Patrimonio Total</span>
                <span className="text-xl font-black block">${patrimonioOperativo.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
@@ -214,7 +231,7 @@ export default async function ResumenPage() {
 
             <div className="p-4 bg-white/5 rounded-2xl">
                <span className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1 block">Total Prestado</span>
-               <span className="text-xl font-bold text-white block">${totalPrestadoAllTime.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
+               <span className="text-xl font-bold text-white block">${totalInyectadoHistorico.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
             </div>
 
             <div className="p-4 bg-white/5 rounded-2xl">
