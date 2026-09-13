@@ -35,12 +35,19 @@ export default function ClientManager({ initialClientes }: { initialClientes: an
   });
 
   const handleDelete = async (id: string, nombre: string) => {
-    if (!window.confirm(`¿Seguro que deseas eliminar a ${nombre}?`)) return;
+    const confirmacion = window.confirm(`¡CUIDADO! Estás a punto de eliminar al cliente ${nombre}.\n\nEsta acción también borrará TODOS sus préstamos (activos e inactivos), solicitudes y cuotas asociadas (Desaparecerá todo su registro). Es IRREVERSIBLE.\n\n¿Estás completamente seguro de continuar?`);
+    if (!confirmacion) return;
+
+    const codigo = window.prompt("Por seguridad, ingresa el PIN maestro para autorizar la eliminación:");
+    if (codigo !== "2510") {
+      alert("PIN incorrecto. Operación cancelada.");
+      return;
+    }
     
     startTransition(async () => {
-      const res = await deleteCliente(id);
+      const res = await deleteCliente(id, codigo);
       if (res.success) {
-        alert("Cliente eliminado.");
+        alert("El cliente y todo su historial han sido eliminados por completo.");
         setClientes(clientes.filter(c => c.id !== id));
       } else {
         alert(res.error);

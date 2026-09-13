@@ -34,30 +34,49 @@ export async function createCliente(data: {
   }
 }
 
-export async function deleteCliente(id: string) {
+export async function deleteCliente(id: string, pin?: string) {
   try {
-    const prestamosActivos = await prisma.prestamo.count({
-      where: {
-        cliente_id: id,
-        estado: { notIn: ['PAGADO', 'ANULADO'] },
-      },
-    });
-
-    if (prestamosActivos > 0) {
-      return { success: false, error: "No se puede eliminar un cliente con préstamos activos." };
+    if (pin !== "2510") {
+      return { success: false, error: "Fallo de seguridad: PIN maestro incorrecto o ausente." };
     }
 
-    // Delete related closed loans first, or just rely on cascade (schema doesn't have cascade right now)
-    // To keep it simple, we'll try to delete. If they have ANY loans, it will throw foreign key error.
-    await prisma.cliente.delete({
-      where: { id },
+    // Usar transacción para borrar en cascada y asegurar que no queden datos huérfanos
+    await prisma.$transaction(async (tx) => {
+      // 1. Obtener todos los préstamos del cliente
+      const prestamos = await tx.prestamo.findMany({ 
+        where: { cliente_id: id }, 
+        select: { id: true } 
+      });
+      const prestamoIds = prestamos.map(p => p.id);
+      
+      // 2. Borrar todas las cuotas de esos préstamos
+      if (prestamoIds.length > 0) {
+        await tx.cuota.deleteMany({
+          where: { prestamo_id: { in: prestamoIds } }
+        });
+      }
+
+      // 3. Borrar los préstamos
+      await tx.prestamo.deleteMany({
+        where: { cliente_id: id }
+      });
+
+      // 4. Borrar las solicitudes de préstamo del cliente
+      await tx.solicitudPrestamo.deleteMany({
+        where: { cliente_id: id }
+      });
+
+      // 5. Finalmente, borrar el cliente
+      await tx.cliente.delete({
+        where: { id },
+      });
     });
 
     revalidatePath("/", "layout");
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting client:", error);
-    return { success: false, error: "El cliente tiene un historial de préstamos o cuotas que impide su eliminación." };
+    return { success: false, error: "Error interno al intentar purgar los datos del cliente: " + error.message };
   }
 }
 
