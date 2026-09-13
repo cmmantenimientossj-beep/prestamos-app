@@ -93,9 +93,9 @@ export default function ClientLayout({ children, notificationBell }: { children:
       </main>
 
       {/* Mobile Floating Bottom Navigation (only on mobile) */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-100 shadow-[0_-15px_30px_-5px_rgba(0,0,0,0.08)] z-40 rounded-t-[2rem]">
+      <nav className="md:hidden fixed bottom-6 left-4 right-4 bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-[0_20px_40px_-5px_rgba(0,0,0,0.5)] z-40 rounded-[2rem] overflow-hidden">
         <div 
-          className="flex flex-nowrap overflow-x-auto items-center p-3 pb-6 gap-2 w-full lg:justify-around"
+          className="flex flex-nowrap overflow-x-auto items-center p-2 gap-1 w-full"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
         >
           <style>{`.overflow-x-auto::-webkit-scrollbar { display: none; }`}</style>
@@ -105,14 +105,21 @@ export default function ClientLayout({ children, notificationBell }: { children:
               <Link 
                 key={link.href} 
                 href={link.href} 
-                className={`flex flex-col items-center px-4 py-2 transition-colors shrink-0 min-w-[70px] ${isActive ? 'text-emerald-600' : 'text-slate-400 hover:text-emerald-500'}`}
+                className={`relative flex flex-col items-center justify-center p-2 rounded-[1.5rem] transition-all shrink-0 min-w-[76px] ${isActive ? 'bg-gradient-to-t from-blue-500/10 to-transparent' : 'hover:bg-white/5'}`}
               >
-                <link.icon size={22} className="mb-1" />
-                <span className="text-[9px] uppercase font-bold tracking-widest opacity-90">{link.name}</span>
+                {isActive && (
+                  <div className="absolute top-0 w-8 h-1 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-b-full shadow-[0_2px_10px_rgba(96,165,250,0.8)]"></div>
+                )}
+                <div className={`p-1.5 rounded-2xl mb-1 ${isActive ? 'text-blue-400 bg-blue-500/10 shadow-[0_0_15px_rgba(96,165,250,0.2)]' : 'text-slate-400'}`}>
+                  <link.icon size={22} className={isActive ? "drop-shadow-md" : ""} />
+                </div>
+                <span className={`text-[9px] uppercase font-bold tracking-widest text-center w-full truncate ${isActive ? 'text-blue-300 opacity-100' : 'text-slate-500 opacity-80'}`}>
+                  {link.name}
+                </span>
               </Link>
             );
           })}
-          <div className="shrink-0 px-2 flex items-center justify-center">
+          <div className="shrink-0 px-2 flex items-center justify-center border-l border-white/10 ml-1 pl-3">
             <LoanSimulator />
           </div>
         </div>
