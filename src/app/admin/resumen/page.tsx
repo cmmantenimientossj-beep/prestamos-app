@@ -8,9 +8,10 @@ import {
 } from "./DashboardCharts";
 import { TrendingUp, Users, Wallet, CreditCard, Activity, CalendarDays, Briefcase, ClipboardList, ArrowRight } from "lucide-react";
 import { startOfMonth, subDays, format } from "date-fns";
-import { getCapitalInvertido, getGastosAllTime } from "@/actions/admin";
+import { getCapitalInvertido } from "@/actions/admin";
 import { FinanzasEditors } from "./FinanzasEditors";
 import { GananciasClientModal } from "./GananciasClientModal";
+import { GastosClientModal } from "./GastosClientModal";
 
 export const dynamic = "force-dynamic";
 
@@ -101,8 +102,11 @@ export default async function ResumenPage() {
   let capitalInvertido = await getCapitalInvertido();
   if (capitalInvertido === 0) capitalInvertido = 5000000; // Parametro default pedido por el usuario
   
-  const gastosAllTime = await getGastosAllTime();
+  // -- SEPARACIÓN DE GASTOS Y COMISIONES --
+  const historialEgresos = await prisma.gasto.findMany({ orderBy: { fecha: 'desc' } });
+  const justGastos = historialEgresos.filter(g => !g.motivo.startsWith("Comisión para: "));
   
+  const gastosAllTime = historialEgresos.reduce((acc, g) => acc + g.monto, 0);
   const patrimonioOperativo = capitalInvertido + gananciasBrutas - gastosAllTime;
   
   // Circulante = Toda la deuda (incluye mora) menos lo que ya pagaron físicamente
@@ -199,6 +203,8 @@ export default async function ResumenPage() {
                <span className="text-xl font-bold block">${capitalInvertido.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
             </div>
             
+            <GastosClientModal gastos={justGastos} />
+
             <GananciasClientModal 
                gananciasPrincipales={gananciasBrutas} 
                clientesGanancias={Object.values(clientProfits)} 
