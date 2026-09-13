@@ -59,9 +59,8 @@ export default async function ResumenPage() {
   const gananciaPeriodo = totalInteresCobradoMes + moraCobradaMes;
 
   // -- NEW: HISTORICAL DATA FOR CAJA --
-  const prestamosActivosAllTime = prestamosActivos;
-  const todasLasCuotasPagadas = await prisma.cuota.findMany({
-    where: { estado: 'PAGADO' },
+  const todasLasCuotasConPagos = await prisma.cuota.findMany({
+    where: { monto_pagado: { gt: 0 } },
     include: { prestamo: true }
   });
   
@@ -69,33 +68,44 @@ export default async function ResumenPage() {
   let interesHistoricoCobrado = 0;
   let moraHistoricaCobrada = 0;
   
-  for (const cuota of todasLasCuotasPagadas) {
+  for (const cuota of todasLasCuotasConPagos) {
     const cuotasTotales = cuota.prestamo.cantidad_cuotas;
     const capOrig = cuota.prestamo.monto_solicitado / cuotasTotales;
     const intOrig = (cuota.prestamo.monto_total_a_devolver - cuota.prestamo.monto_solicitado) / cuotasTotales;
+    const valorBaseCuota = capOrig + intOrig;
+
+    let moraCobrada = 0;
+    let pagoBase = cuota.monto_pagado;
+
+    if (cuota.interes_mora_aplicado > 0) {
+      if (pagoBase > valorBaseCuota) {
+        moraCobrada = Math.min(pagoBase - valorBaseCuota, cuota.interes_mora_aplicado);
+        pagoBase = pagoBase - moraCobrada;
+      }
+    }
+
+    const fraccion = pagoBase / valorBaseCuota;
     
-    capitalHistoricoDevuelto += capOrig;
-    interesHistoricoCobrado += intOrig;
-    moraHistoricaCobrada += cuota.interes_mora_aplicado || 0;
+    capitalHistoricoDevuelto += capOrig * Math.min(fraccion, 1);
+    interesHistoricoCobrado += intOrig * Math.min(fraccion, 1);
+    moraHistoricaCobrada += moraCobrada;
   }
   
   const totalPrestadoAllTime = prestamosActivos.reduce((acc, p) => acc + p.monto_solicitado, 0);
-  // Patrimonio circulante = El capital que prestaste en préstamos activos que aún NO te han devuelto.
-  // Wait, totalPrestadoAllTime only counts ACTIVE loans. The capital returned inside ACTIVE loans reduces circulating amount. 
-  // For a simpler global stat: Total ALL TIME loans given - Total ALL TIME capital returned = Capital out in the street right now.
+
   const todosLosPrestamos = await prisma.prestamo.findMany({
-     // Incluir tanto ACTIVOS como PAGADOS para un balance histórico exacto
      select: { monto_solicitado: true }
   });
   const totalInyectadoHistorico = todosLosPrestamos.reduce((acc, p) => acc + p.monto_solicitado, 0);
-  const circulante = totalInyectadoHistorico - capitalHistoricoDevuelto;
   
+  const circulante = totalInyectadoHistorico - capitalHistoricoDevuelto;
   const gananciasHistoricas = interesHistoricoCobrado + moraHistoricaCobrada;
   
   const capitalInvertido = await getCapitalInvertido();
   const gastosAllTime = await getGastosAllTime();
   
-  const enCaja = capitalInvertido - circulante + gananciasHistoricas - gastosAllTime;
+  const patrimonioOperativo = capitalInvertido + gananciasHistoricas - gastosAllTime;
+  const enCaja = patrimonioOperativo - circulante;
 
   // Time-Series Data Aggregation (Last 30 Days)
   const mapData = new Map();
@@ -167,22 +177,26 @@ export default async function ResumenPage() {
       
       {/* Estado del Negocio Global */}
       <div className="mb-6 p-6 bg-gradient-to-br from-blue-900 to-slate-900 rounded-3xl text-white shadow-xl">
-         <h2 className="text-lg font-bold flex items-center gap-2 mb-6 opacity-90"><Briefcase size={18} /> Balance Global de la Empresa</h2>
-         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+         <h2 className="text-lg font-bold flex items-center gap-2 mb-6 opacity-90"><Briefcase size={18} /> Balance Global de la Empresa (Histórico Neto)</h2>
+         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="p-4 bg-white/10 rounded-2xl border border-white/10">
-               <span className="text-blue-300 text-xs font-bold uppercase tracking-wider mb-1 block">Fondo Invertido</span>
-               <span className="text-2xl font-bold block">${capitalInvertido.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
+               <span className="text-blue-300 text-[10px] font-bold uppercase tracking-widest mb-1 block">Fondo Invertido</span>
+               <span className="text-xl font-bold block">${capitalInvertido.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
             </div>
-            <div className="p-4 bg-white/5 rounded-2xl">
-               <span className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1 block">Capital Circulante</span>
-               <span className="text-xl font-bold block">${circulante.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
-            </div>
-            <div className="p-4 bg-white/5 rounded-2xl">
-               <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1 block">Ganancias Históricas</span>
+            <div className="p-4 bg-white/5 rounded-2xl border border-emerald-500/20">
+               <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-widest mb-1 block">Ganancias Históricas</span>
                <span className="text-xl font-bold block">${gananciasHistoricas.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
             </div>
+            <div className="p-4 bg-indigo-500/20 rounded-2xl border border-indigo-500/30">
+               <span className="text-indigo-300 text-[10px] font-bold uppercase tracking-widest mb-1 block">Patrimonio Total</span>
+               <span className="text-xl font-black block">${patrimonioOperativo.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
+            </div>
+            <div className="p-4 bg-white/5 rounded-2xl">
+               <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1 block">Cap. Circulante (Calle)</span>
+               <span className="text-xl font-bold block">${circulante.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
+            </div>
             <div className="p-4 bg-emerald-500/20 rounded-2xl border border-emerald-500/30">
-               <span className="text-emerald-300 text-xs font-bold uppercase tracking-wider mb-1 block">Disponible en Caja</span>
+               <span className="text-emerald-300 text-[10px] font-bold uppercase tracking-widest mb-1 block">Disponible en Caja</span>
                <span className="text-2xl font-black text-emerald-400 block">${enCaja.toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
             </div>
          </div>
