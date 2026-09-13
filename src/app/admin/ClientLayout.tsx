@@ -93,21 +93,29 @@ export default function ClientLayout({ children, notificationBell }: { children:
       </main>
 
       {/* Mobile Floating Bottom Navigation (only on mobile) */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-100 shadow-[0_-15px_30px_-5px_rgba(0,0,0,0.08)] flex justify-around p-3 pb-6 z-40 rounded-t-[2rem]">
-        {links.map((link) => {
-          const isActive = pathname?.startsWith(link.href);
-          return (
-            <Link 
-              key={link.href} 
-              href={link.href} 
-              className={`flex flex-col items-center px-4 py-2 transition-colors ${isActive ? 'text-emerald-600' : 'text-slate-400 hover:text-emerald-500'}`}
-            >
-              <link.icon size={24} />
-              <span className="text-[10px] uppercase font-bold tracking-wider mt-1.5 opacity-90">{link.name}</span>
-            </Link>
-          );
-        })}
-        <LoanSimulator />
+      <nav className="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-100 shadow-[0_-15px_30px_-5px_rgba(0,0,0,0.08)] z-40 rounded-t-[2rem]">
+        <div 
+          className="flex flex-nowrap overflow-x-auto items-center p-3 pb-6 gap-2 w-full lg:justify-around"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+        >
+          <style>{`.overflow-x-auto::-webkit-scrollbar { display: none; }`}</style>
+          {links.map((link) => {
+            const isActive = pathname?.startsWith(link.href);
+            return (
+              <Link 
+                key={link.href} 
+                href={link.href} 
+                className={`flex flex-col items-center px-4 py-2 transition-colors shrink-0 min-w-[70px] ${isActive ? 'text-emerald-600' : 'text-slate-400 hover:text-emerald-500'}`}
+              >
+                <link.icon size={22} className="mb-1" />
+                <span className="text-[9px] uppercase font-bold tracking-widest opacity-90">{link.name}</span>
+              </Link>
+            );
+          })}
+          <div className="shrink-0 px-2 flex items-center justify-center">
+            <LoanSimulator />
+          </div>
+        </div>
       </nav>
       
     </div>
