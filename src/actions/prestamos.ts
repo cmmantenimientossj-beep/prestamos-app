@@ -90,17 +90,27 @@ export async function approvePrestamo(id: string) {
       let activeClienteId = solicitud.cliente_id;
 
       if (!activeClienteId) {
-         // Crear el cliente oficial en base a la solicitud
-         const nc = await tx.cliente.create({
-            data: {
-               nombre_apellido: solicitud.nuevo_cliente_nombre_apellido || "Desconocido",
-               direccion_personal: solicitud.nuevo_cliente_direccion_personal || null,
-               celular: solicitud.nuevo_cliente_celular || null,
-               // Si se proporcionó el DNI real (casi seguro ya que el backend lo captura ahora), se usa. Si no, genera temporal.
-               dni: solicitud.nuevo_cliente_dni || `TEMP-${randomBytes(4).toString("hex").toUpperCase()}`
-            }
-         });
-         activeClienteId = nc.id;
+         let dniToUse = solicitud.nuevo_cliente_dni;
+         let existingClient = null;
+
+         if (dniToUse) {
+            existingClient = await tx.cliente.findUnique({ where: { dni: dniToUse } });
+         }
+
+         if (existingClient) {
+            activeClienteId = existingClient.id;
+         } else {
+            // Crear el cliente oficial en base a la solicitud
+            const nc = await tx.cliente.create({
+               data: {
+                  nombre_apellido: solicitud.nuevo_cliente_nombre_apellido || "Desconocido",
+                  direccion_personal: solicitud.nuevo_cliente_direccion_personal || null,
+                  celular: solicitud.nuevo_cliente_celular || null,
+                  dni: dniToUse || `TEMP-${randomBytes(4).toString("hex").toUpperCase()}`
+               }
+            });
+            activeClienteId = nc.id;
+         }
       }
 
       // Alta del préstamo activo
