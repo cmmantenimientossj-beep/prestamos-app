@@ -11,7 +11,7 @@ export default withAuth(
 
     if (isRoot) {
       if (isAuth) {
-        if (token.role === "ADMIN") {
+        if (token.role === "ADMIN" || token.role === "ADMIN_VIEWER") {
           return NextResponse.redirect(new URL('/admin/resumen', req.url));
         }
         return NextResponse.redirect(new URL('/mis-rutas', req.url));
@@ -22,7 +22,7 @@ export default withAuth(
     // Si ya estamos autenticados y tratamos de ir a loguear, reedirijimos al panel correcto.
     if (isAuthPage) {
       if (isAuth) {
-        if (token.role === "ADMIN") {
+        if (token.role === "ADMIN" || token.role === "ADMIN_VIEWER") {
           return NextResponse.redirect(new URL('/admin/resumen', req.url));
         }
         return NextResponse.redirect(new URL('/mis-rutas', req.url));
@@ -36,8 +36,14 @@ export default withAuth(
     }
 
     // Aislamiento: El Cobrador (PWA Mobile) NO tiene acceso a /admin
-    if (isAdminRoute && token.role !== "ADMIN") {
+    if (isAdminRoute && token.role !== "ADMIN" && token.role !== "ADMIN_VIEWER") {
       return NextResponse.redirect(new URL('/mis-rutas', req.url));
+    }
+
+    // Bloqueo estricto de Modificaciones para ADMIN_VIEWER
+    // Todas las Server Actions y mutate endpoints utilizan método POST o DELETE
+    if (token.role === "ADMIN_VIEWER" && (req.method === "POST" || req.method === "DELETE" || req.method === "PUT" || req.method === "PATCH")) {
+      return new NextResponse("Acceso Denegado: Modo Sólo Lectura", { status: 403 });
     }
     
   },
