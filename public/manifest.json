@@ -2,7 +2,7 @@
   "name": "Préstamos PWA",
   "short_name": "Préstamos",
   "description": "Sistema de Gestión Financiera y Préstamos",
-  "start_url": "/",
+  "start_url": "/login",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",

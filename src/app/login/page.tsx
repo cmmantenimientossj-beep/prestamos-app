@@ -1,6 +1,6 @@
 "use client";
-import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { signIn, signOut, getSession } from "next-auth/react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, User } from "lucide-react";
 
@@ -10,6 +10,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Al entrar a login, cerramos cualquier sesión previa para requerir credenciales
+    signOut({ redirect: false });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,8 +31,14 @@ export default function LoginPage() {
       setError("Credenciales inválidas o usuario inactivo");
       setLoading(false);
     } else {
-      // Forzar hard-refresh para que el Server Middleware reevalúe y rutee por Rol
-      window.location.href = "/";
+      // Redirección directa por rol sin depender de la raíz "/"
+      const session = await getSession();
+      const role = (session?.user as any)?.role;
+      if (role === "ADMIN" || role === "ADMIN_VIEWER") {
+        window.location.href = "/admin/resumen";
+      } else {
+        window.location.href = "/mis-rutas";
+      }
     }
   };
 

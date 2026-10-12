@@ -10,23 +10,11 @@ export default withAuth(
     const isRoot = req.nextUrl.pathname === '/';
 
     if (isRoot) {
-      if (isAuth) {
-        if (token.role === "ADMIN" || token.role === "ADMIN_VIEWER") {
-          return NextResponse.redirect(new URL('/admin/resumen', req.url));
-        }
-        return NextResponse.redirect(new URL('/mis-rutas', req.url));
-      }
       return NextResponse.redirect(new URL('/login', req.url));
     }
 
-    // Si ya estamos autenticados y tratamos de ir a loguear, reedirijimos al panel correcto.
+    // Permitir el acceso libre a la pantalla de login sin auto-redirecciones al panel
     if (isAuthPage) {
-      if (isAuth) {
-        if (token.role === "ADMIN" || token.role === "ADMIN_VIEWER") {
-          return NextResponse.redirect(new URL('/admin/resumen', req.url));
-        }
-        return NextResponse.redirect(new URL('/mis-rutas', req.url));
-      }
       return null;
     }
 
@@ -60,8 +48,10 @@ export default withAuth(
 export const config = {
   matcher: [
     "/",
+    "/login",
     "/admin/:path*", 
     "/mis-rutas/:path*", 
+    "/historial/:path*",
     "/nuevo-prestamo/:path*", 
     "/resumen/:path*"
   ]
