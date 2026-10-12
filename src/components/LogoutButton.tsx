@@ -6,6 +6,9 @@ export function LogoutButton() {
   return (
     <button 
       onClick={async () => {
+        try {
+          sessionStorage.removeItem("ryb_active_session");
+        } catch (e) {}
         await signOut({ redirect: false });
         window.location.href = '/login';
       }}

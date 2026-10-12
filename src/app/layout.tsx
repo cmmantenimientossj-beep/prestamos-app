@@ -30,16 +30,31 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {/* NATIVE INLINE SCRIPT: Destruye los Service Workers inmortalizados sin depender de JS/React chunks */}
+        {/* NATIVE INLINE SCRIPT: Control estricto de inicio en login y purga de Service Workers / Cache */}
         <script dangerouslySetInnerHTML={{
           __html: `
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                  registration.unregister();
+            try {
+              if (typeof window !== 'undefined') {
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(var i=0; i<registrations.length; i++) {
+                      registrations[i].unregister();
+                    }
+                  });
                 }
-              });
-            }
+                if ('caches' in window) {
+                  caches.keys().then(function(names) {
+                    for(var j=0; j<names.length; j++) {
+                      caches.delete(names[j]);
+                    }
+                  });
+                }
+                var p = window.location.pathname;
+                if (p !== '/login' && !sessionStorage.getItem('ryb_active_session')) {
+                  window.location.replace('/login');
+                }
+              }
+            } catch(e) {}
           `
         }} />
         <ServiceWorkerPurger />

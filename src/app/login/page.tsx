@@ -13,6 +13,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     // Al entrar a login, cerramos cualquier sesión previa para requerir credenciales
+    try {
+      sessionStorage.removeItem("ryb_active_session");
+    } catch (e) {}
     signOut({ redirect: false });
   }, []);
 
@@ -31,6 +34,9 @@ export default function LoginPage() {
       setError("Credenciales inválidas o usuario inactivo");
       setLoading(false);
     } else {
+      try {
+        sessionStorage.setItem("ryb_active_session", "true");
+      } catch (e) {}
       // Redirección directa por rol sin depender de la raíz "/"
       const session = await getSession();
       const role = (session?.user as any)?.role;
