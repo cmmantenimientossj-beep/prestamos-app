@@ -1,8 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import AgendaSemanalUI from "./AgendaSemanalUI";
 import { startOfWeek, addDays, startOfDay, endOfDay } from "date-fns";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 export default async function CobroSemanalPage() {
+  const session = await getServerSession(authOptions);
+  const isAdminCmiranda = session?.user?.role === "ADMIN" && session?.user?.email === "cmiranda";
   const today = new Date();
   
   // Semana de Lunes (1) a Sábado (6)
@@ -38,7 +42,7 @@ export default async function CobroSemanalPage() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-       <AgendaSemanalUI cuotas={cuotas} cobradores={cobradores} />
+       <AgendaSemanalUI cuotas={cuotas} cobradores={cobradores} isAdminCmiranda={isAdminCmiranda} />
     </div>
   );
 }

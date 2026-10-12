@@ -3,15 +3,27 @@
 import { useState, useTransition } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Clock, CheckCircle, AlertTriangle, Edit2, X, Save } from "lucide-react";
+import { Clock, CheckCircle, AlertTriangle, Edit2, X, Save, DollarSign } from "lucide-react";
 import { updatePrestamoDates } from "@/actions/prestamos";
+import AdminCobroModal from "@/components/AdminCobroModal";
 
-export default function ClientProfileTabs({ prestamos }: { prestamos: any[] }) {
+export default function ClientProfileTabs({ 
+  prestamos,
+  clienteNombre,
+  isAdminCmiranda = false
+}: { 
+  prestamos: any[];
+  clienteNombre?: string;
+  isAdminCmiranda?: boolean;
+}) {
   const [tab, setTab] = useState<"ACTIVOS" | "ARCHIVADOS">("ACTIVOS");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFechaEntrega, setEditFechaEntrega] = useState("");
   const [editFechaCobro, setEditFechaCobro] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  // Modal para asentar cobro desde admin
+  const [selectedCuotaData, setSelectedCuotaData] = useState<{ cuota: any; prestamo: any } | null>(null);
 
   const activos = prestamos.filter(p => p.estado !== 'PAGADO');
   const archivados = prestamos.filter(p => p.estado === 'PAGADO');
@@ -19,15 +31,12 @@ export default function ClientProfileTabs({ prestamos }: { prestamos: any[] }) {
   const handleEditClick = (p: any) => {
     setEditingId(p.id);
     setEditFechaEntrega(new Date(p.fecha_entrega).toISOString().split('T')[0]);
-    // Asumimos que la primera cuota nos da una idea del primer cobro si es que fecha_primer_cobro no está directamente disponible, 
-    // pero sí lo está (es un campo escalar Prisma). Lo casteamos por seguridad de timezone.
     setEditFechaCobro(new Date(p.fecha_primer_cobro || p.cuotas[0]?.fecha_vencimiento).toISOString().split('T')[0]);
   };
 
   const handleSave = (pId: string) => {
     if (!editFechaEntrega || !editFechaCobro) return;
     startTransition(async () => {
-      // Usamos T12:00:00 para evitar problemas de Timezone shift
       await updatePrestamoDates(
         pId, 
         new Date(editFechaEntrega + "T12:00:00"), 
@@ -63,7 +72,7 @@ export default function ClientProfileTabs({ prestamos }: { prestamos: any[] }) {
            </div>
          ) : (
            list.map((prestamo) => {
-             const prestamoMora = prestamo.cuotas.some((c: any) => c.estado === 'PENDIENTE' && new Date(c.fecha_vencimiento) < new Date());
+             const prestamoMora = prestamo.cuotas.some((c: any) => (c.estado === 'PENDIENTE' || c.estado === 'MORA') && new Date(c.fecha_vencimiento) < new Date());
              const prestamoAlDia = prestamo.estado === 'ACTIVO' && !prestamoMora;
              const prestamoPagado = prestamo.estado === 'PAGADO';
 
@@ -129,34 +138,81 @@ export default function ClientProfileTabs({ prestamos }: { prestamos: any[] }) {
                    </div>
                  </div>
 
-                 {/* Timeline Simplificado */}
-                 <div className="p-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                   {prestamo.cuotas.map((cuota: any) => {
-                     let cColor = 'bg-slate-100 border-slate-200 text-slate-400';
-                     let cIcon = <Clock size={14} className="opacity-50" />;
-                     
-                     if (cuota.estado === 'PAGADO') {
-                       cColor = 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm';
-                       cIcon = <CheckCircle size={14} />;
-                     } else if (new Date(cuota.fecha_vencimiento) < new Date()) {
-                       cColor = 'bg-red-50 border-red-200 text-red-600 shadow-[0_0_8px_rgba(239,68,68,0.2)]';
-                       cIcon = <AlertTriangle size={14} />;
-                     }
+                 {/* Timeline Simplificado de Cuotas */}
+                 <div className="p-4">
+                   {isAdminCmiranda && !prestamoPagado && (
+                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                       <DollarSign size={13} className="text-emerald-500" />
+                       Haz clic en cualquier cuota pendiente para asentar su pago
+                     </p>
+                   )}
+                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                     {prestamo.cuotas.map((cuota: any) => {
+                       const isPagada = cuota.estado === 'PAGADO' || cuota.estado === 'PAGADA' || cuota.monto_pagado >= cuota.valor;
+                       const isParcial = cuota.estado === 'PARCIAL';
+                       const isVencida = !isPagada && new Date(cuota.fecha_vencimiento) < new Date();
 
-                     return (
-                       <div key={cuota.id} className={`border rounded-xl p-2 flex flex-col items-center justify-center text-center transition-all ${cColor}`}>
-                         <span className="text-[10px] font-black mb-1 opacity-90">C-{cuota.numero_cuota}</span>
-                         {cIcon}
-                         <span className="text-[9px] mt-1.5 font-bold tracking-wider">{format(new Date(cuota.fecha_vencimiento), "dd/MM")}</span>
-                       </div>
-                     )
-                   })}
+                       let cColor = 'bg-slate-100 border-slate-200 text-slate-400';
+                       let cIcon = <Clock size={14} className="opacity-50" />;
+                       
+                       if (isPagada) {
+                         cColor = 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm';
+                         cIcon = <CheckCircle size={14} />;
+                       } else if (isParcial) {
+                         cColor = 'bg-orange-50 border-orange-200 text-orange-600 shadow-sm';
+                         cIcon = <DollarSign size={14} />;
+                       } else if (isVencida) {
+                         cColor = 'bg-red-50 border-red-200 text-red-600 shadow-[0_0_8px_rgba(239,68,68,0.2)]';
+                         cIcon = <AlertTriangle size={14} />;
+                       }
+
+                       const canClickToPay = isAdminCmiranda && !isPagada;
+
+                       return (
+                         <button
+                           key={cuota.id}
+                           type="button"
+                           disabled={!canClickToPay}
+                           onClick={() => canClickToPay && setSelectedCuotaData({ cuota, prestamo })}
+                           title={canClickToPay ? "Asentar pago de cuota (cmiranda)" : undefined}
+                           className={`border rounded-xl p-2 flex flex-col items-center justify-center text-center transition-all ${cColor} ${
+                             canClickToPay 
+                               ? 'cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/50 hover:scale-105 active:scale-95 shadow-sm' 
+                               : 'cursor-default'
+                           }`}
+                         >
+                           <span className="text-[10px] font-black mb-1 opacity-90">C-{cuota.numero_cuota}</span>
+                           {cIcon}
+                           <span className="text-[9px] mt-1.5 font-bold tracking-wider">
+                             {format(new Date(cuota.fecha_vencimiento), "dd/MM")}
+                           </span>
+                           {isParcial && (
+                             <span className="text-[8px] font-black text-orange-500 mt-0.5 uppercase">
+                               Parcial
+                             </span>
+                           )}
+                         </button>
+                       );
+                     })}
+                   </div>
                  </div>
                </div>
              );
            })
          )}
        </div>
+
+       {/* Modal de Cobro Administrativo */}
+       {selectedCuotaData && (
+         <AdminCobroModal
+           cuota={selectedCuotaData.cuota}
+           clienteNombre={clienteNombre}
+           prestamoCodigo={selectedCuotaData.prestamo.codigo}
+           cobradorNombre={selectedCuotaData.prestamo.cobrador?.nombre}
+           onClose={() => setSelectedCuotaData(null)}
+         />
+       )}
     </div>
-  )
+  );
 }
+

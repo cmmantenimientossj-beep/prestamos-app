@@ -1,6 +1,9 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
 export async function getDashboardMetrics() {
   // 1. Capital Activo (Suma del monto a devolver de préstamos activos)
@@ -103,5 +106,141 @@ export async function addGasto(motivo: string, monto: number) {
       monto,
     }
   });
+}
+
+/**
+ * Permite asentar el pago de una cuota desde el panel de administración.
+ * REGLA DE SEGURIDAD: Únicamente el administrador principal con usuario/email "cmiranda"
+ * puede ejecutar esta acción. Al confirmarse, emite una notificación al cobrador asignado.
+ */
+export async function asentarPagoPorAdmin(
+  cuotaId: string, 
+  monto: number, 
+  medioPago: string = "TRANSFERENCIA"
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.id) {
+      return { success: false, error: "No autenticado. Por favor inicie sesión." };
+    }
+
+    // Validación estricta en base de datos: solo el administrador cmiranda tiene autorización
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: session.user.id }
+    });
+
+    if (!usuario || usuario.rol !== "ADMIN" || usuario.email !== "cmiranda") {
+      return { 
+        success: false, 
+        error: "Acceso denegado: Solo el administrador cmiranda está autorizado a asentar pagos desde el panel." 
+      };
+    }
+
+    if (monto <= 0) {
+      return { success: false, error: "El monto a asentar debe ser mayor a 0." };
+    }
+
+    const cuota = await prisma.cuota.findUnique({
+      where: { id: cuotaId },
+      include: {
+        prestamo: {
+          include: {
+            cliente: true,
+            cobrador: true
+          }
+        }
+      }
+    });
+
+    if (!cuota) {
+      return { success: false, error: "Cuota no encontrada." };
+    }
+
+    if (cuota.estado === "PAGADA" || cuota.monto_pagado >= cuota.valor) {
+      return { success: false, error: "Esta cuota ya se encuentra totalmente cancelada." };
+    }
+
+    const saldoPendiente = cuota.valor - cuota.monto_pagado;
+    if (monto > saldoPendiente) {
+      return { 
+        success: false, 
+        error: `El monto ingresado ($${monto.toLocaleString('es-AR')}) excede el saldo restante de la cuota ($${saldoPendiente.toLocaleString('es-AR')}).` 
+      };
+    }
+
+    const nuevoMontoPagado = cuota.monto_pagado + monto;
+    const isCompleted = nuevoMontoPagado >= cuota.valor;
+
+    // Actualizar la cuota
+    await prisma.cuota.update({
+      where: { id: cuotaId },
+      data: {
+        monto_pagado: nuevoMontoPagado,
+        estado: isCompleted ? "PAGADA" : "PARCIAL",
+        medio_pago: medioPago,
+        fecha_pago: new Date()
+      }
+    });
+
+    // Verificar si el préstamo se canceló en su totalidad
+    if (isCompleted) {
+      const cuotasRestantes = await prisma.cuota.count({
+        where: {
+          prestamo_id: cuota.prestamo_id,
+          estado: { not: "PAGADA" }
+        }
+      });
+      if (cuotasRestantes === 0) {
+        await prisma.prestamo.update({
+          where: { id: cuota.prestamo_id },
+          data: { estado: "PAGADO" }
+        });
+      }
+    }
+
+    // Registrar en auditoría
+    await prisma.auditLog.create({
+      data: {
+        usuario_id: usuario.id,
+        accion: "PAGO_ASENTADO_ADMIN",
+        entidad_afectada: `Cuota_${cuota.id}`,
+        valores_nuevos: JSON.stringify({
+          monto,
+          medioPago,
+          cuotaNumero: cuota.numero_cuota,
+          cliente: cuota.prestamo.cliente.nombre_apellido,
+          prestamoCodigo: cuota.prestamo.codigo
+        })
+      }
+    });
+
+    // Notificar al Cobrador asignado
+    const cobradorId = cuota.prestamo.cobrador_id;
+    if (cobradorId) {
+      const nombreAdmin = usuario.nombre || "cmiranda";
+      const montoFormateado = monto.toLocaleString('es-AR');
+      const clienteNombre = cuota.prestamo.cliente.nombre_apellido;
+      const cuotaNum = cuota.numero_cuota;
+      const codigoPrestamo = cuota.prestamo.codigo;
+
+      await prisma.notificacion.create({
+        data: {
+          usuario_id: cobradorId,
+          titulo: "Pago Asentado por Administración",
+          mensaje: `El administrador ${nombreAdmin} asentó el pago de $${montoFormateado} (${medioPago}) para la cuota N°${cuotaNum} de ${clienteNombre} (Ref: ${codigoPrestamo}). Ya no es necesario cobrar este valor en la ruta.`
+        }
+      });
+    }
+
+    revalidatePath("/", "layout");
+    revalidatePath(`/admin/clientes/${cuota.prestamo.cliente_id}`);
+    revalidatePath("/admin/cobro-semanal");
+    revalidatePath("/mis-rutas");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error asentando pago por admin:", error);
+    return { success: false, error: "Ocurrió un error interno al asentar el pago." };
+  }
 }
 

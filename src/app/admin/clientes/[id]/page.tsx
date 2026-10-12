@@ -4,15 +4,21 @@ import { ArrowLeft, User, Phone, MapPin, Store, DollarSign, Wallet, TrendingUp }
 import ClientProfileTabs from "./ClientProfileTabs";
 import CrmControls from "./CrmControls";
 import PrintStatement from "./PrintStatement";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 export default async function ClientHistoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const session = await getServerSession(authOptions);
+  const isAdminCmiranda = session?.user?.role === "ADMIN" && session?.user?.email === "cmiranda";
+
   const cliente = await prisma.cliente.findUnique({
     where: { id },
     include: {
       prestamos: {
         orderBy: { fecha_entrega: 'desc' },
         include: {
+          cobrador: { select: { nombre: true } },
           cuotas: {
             orderBy: { fecha_vencimiento: 'asc' }
           }
@@ -210,7 +216,11 @@ export default async function ClientHistoryPage({ params }: { params: Promise<{ 
         Expedientes de Préstamo
       </h2>
 
-      <ClientProfileTabs prestamos={cliente.prestamos} />
+      <ClientProfileTabs 
+        prestamos={cliente.prestamos} 
+        clienteNombre={cliente.nombre_apellido} 
+        isAdminCmiranda={isAdminCmiranda} 
+      />
     </div>
   );
 }

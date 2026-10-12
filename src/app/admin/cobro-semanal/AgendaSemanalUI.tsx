@@ -1,11 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar as CalendarIcon, CheckCircle2, AlertCircle, Clock, User } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle2, AlertCircle, Clock, User, DollarSign } from "lucide-react";
 import { getDay, isValid } from "date-fns";
+import AdminCobroModal from "@/components/AdminCobroModal";
 
-export default function AgendaSemanalUI({ cuotas, cobradores }: { cuotas: any[], cobradores: any[] }) {
+export default function AgendaSemanalUI({ 
+  cuotas, 
+  cobradores,
+  isAdminCmiranda = false
+}: { 
+  cuotas: any[];
+  cobradores: any[];
+  isAdminCmiranda?: boolean;
+}) {
   const [collectorFilter, setCollectorFilter] = useState<string>("todos");
+  const [selectedCuotaForModal, setSelectedCuotaForModal] = useState<any>(null);
 
   // Calculate stats for the progress bar
   const totalCuotas = cuotas.length;
@@ -60,7 +70,7 @@ export default function AgendaSemanalUI({ cuotas, cobradores }: { cuotas: any[],
         <div className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-xl shadow-sm w-full md:w-auto">
           <User size={18} className="text-slate-400" />
           <select 
-            value={collectorFilter}
+            value={collectorFilter} 
             onChange={(e) => setCollectorFilter(e.target.value)}
             className="bg-transparent focus:outline-none text-slate-700 font-semibold w-full md:w-48 appearance-none cursor-pointer"
           >
@@ -138,6 +148,16 @@ export default function AgendaSemanalUI({ cuotas, cobradores }: { cuotas: any[],
                        <p className="font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 mt-1">
                          {c.prestamo.cobrador.nombre}
                        </p>
+                       {isAdminCmiranda && (
+                         <button
+                           type="button"
+                           onClick={() => setSelectedCuotaForModal(c)}
+                           className="mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-sm transition-all flex items-center gap-1 active:scale-95"
+                           title="Asentar pago de cuota como cmiranda"
+                         >
+                           <DollarSign size={13} /> Asentar Pago
+                         </button>
+                       )}
                      </div>
                   </div>
                 ))}
@@ -154,7 +174,17 @@ export default function AgendaSemanalUI({ cuotas, cobradores }: { cuotas: any[],
           </div>
         )}
       </div>
-    
+
+      {/* Modal de Cobro Administrativo */}
+      {selectedCuotaForModal && (
+        <AdminCobroModal
+          cuota={selectedCuotaForModal}
+          clienteNombre={selectedCuotaForModal.prestamo?.cliente?.nombre_apellido}
+          prestamoCodigo={selectedCuotaForModal.prestamo?.codigo}
+          cobradorNombre={selectedCuotaForModal.prestamo?.cobrador?.nombre}
+          onClose={() => setSelectedCuotaForModal(null)}
+        />
+      )}
     </div>
   );
 }
