@@ -128,6 +128,26 @@ export default async function ClientHistoryPage({ params }: { params: Promise<{ 
                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-1.5"><User size={14}/> Perfil Legal</h3>
                <div className="space-y-4">
                  <div className="flex items-start gap-3">
+                   <Phone className="text-emerald-500 shrink-0 mt-0.5" size={18} />
+                   <div>
+                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Teléfono / WhatsApp</p>
+                     <div className="flex items-center gap-2">
+                       <p className="text-slate-700 font-bold text-sm font-mono">{cliente.celular || 'Sin celular'}</p>
+                       {cliente.celular && (
+                         <a
+                           href={`https://wa.me/${cliente.celular.replace(/\D/g, '')}`}
+                           target="_blank"
+                           rel="noreferrer"
+                           className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md text-[10px] font-bold border border-emerald-200 transition-colors flex items-center gap-1"
+                           title="Abrir WhatsApp"
+                         >
+                           <Phone size={10} /> WhatsApp
+                         </a>
+                       )}
+                     </div>
+                   </div>
+                 </div>
+                 <div className="flex items-start gap-3">
                    <MapPin className="text-blue-500 shrink-0 mt-0.5" size={18} />
                    <div>
                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Casa</p>

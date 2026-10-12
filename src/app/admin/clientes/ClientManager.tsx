@@ -8,7 +8,7 @@ import Link from "next/link";
 export default function ClientManager({ initialClientes }: { initialClientes: any[] }) {
   const [clientes, setClientes] = useState(initialClientes);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"todos" | "con-credito-activo" | "sin-credito-activo" | "inactivos">("todos");
+  const [filterStatus, setFilterStatus] = useState<"todos" | "al-dia" | "con-atraso" | "en-mora" | "sin-deuda">("todos");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -21,18 +21,24 @@ export default function ClientManager({ initialClientes }: { initialClientes: an
   const [nombreNegocio, setNombreNegocio] = useState("");
 
   const filteredClientes = clientes.filter(c => {
-    const matchesSearch = c.nombre_apellido.toLowerCase().includes(searchTerm.toLowerCase()) || c.dni.includes(searchTerm);
+    const matchesSearch = c.nombre_apellido.toLowerCase().includes(searchTerm.toLowerCase()) || (c.dni && c.dni.includes(searchTerm));
     if (!matchesSearch) return false;
 
-    const hasActive = c.prestamos && c.prestamos.length > 0;
-    const totalLoans = c._count?.prestamos || 0;
+    const status = c.estadoFinanciero || (c.prestamos?.some((p: any) => p.estado === 'MORA') ? 'EN_MORA' : c.prestamos && c.prestamos.length > 0 ? 'AL_DIA' : 'SIN_DEUDA');
 
-    if (filterStatus === "con-credito-activo") return hasActive;
-    if (filterStatus === "sin-credito-activo") return !hasActive && totalLoans > 0;
-    if (filterStatus === "inactivos") return totalLoans === 0;
+    if (filterStatus === "al-dia") return status === "AL_DIA";
+    if (filterStatus === "con-atraso") return status === "CON_ATRASO";
+    if (filterStatus === "en-mora") return status === "EN_MORA";
+    if (filterStatus === "sin-deuda") return status === "SIN_DEUDA";
     
     return true; // todos
   });
+
+  // Conteo para insignias de filtros
+  const countAlDia = clientes.filter(c => (c.estadoFinanciero || (c.prestamos && c.prestamos.length > 0 && !c.prestamos?.some((p: any) => p.estado === 'MORA') ? 'AL_DIA' : '')) === 'AL_DIA').length;
+  const countAtraso = clientes.filter(c => c.estadoFinanciero === 'CON_ATRASO').length;
+  const countMora = clientes.filter(c => (c.estadoFinanciero === 'EN_MORA' || (!c.estadoFinanciero && c.prestamos?.some((p: any) => p.estado === 'MORA')))).length;
+  const countSinDeuda = clientes.filter(c => (c.estadoFinanciero === 'SIN_DEUDA' || (!c.estadoFinanciero && (!c.prestamos || c.prestamos.length === 0)))).length;
 
   const handleDelete = async (id: string, nombre: string) => {
     const confirmacion = window.confirm(`¡CUIDADO! Estás a punto de eliminar al cliente ${nombre}.\n\nEsta acción también borrará TODOS sus préstamos (activos e inactivos), solicitudes y cuotas asociadas (Desaparecerá todo su registro). Es IRREVERSIBLE.\n\n¿Estás completamente seguro de continuar?`);
@@ -81,7 +87,7 @@ export default function ClientManager({ initialClientes }: { initialClientes: an
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 relative z-40">
         <div>
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Directorio de Clientes</h1>
-          <p className="text-slate-500 mt-1">Gestiona los clientes y su historial crediticio</p>
+          <p className="text-slate-500 mt-1">Accede a las fichas de clientes y visualiza su estado crediticio</p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
           <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white hover:bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl border border-slate-200 transition-colors shadow-sm pointer-events-auto">
@@ -98,128 +104,129 @@ export default function ClientManager({ initialClientes }: { initialClientes: an
         </div>
       </div>
 
+      {/* Filtros de Estado */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2 w-full relative z-40 pointer-events-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
         <style>{`
           .flex.gap-2.mb-6.overflow-x-auto::-webkit-scrollbar { display: none; }
         `}</style>
         <button 
           onClick={() => setFilterStatus("todos")}
-          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 pointer-events-auto cursor-pointer ${filterStatus === "todos" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+          className={`px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 pointer-events-auto cursor-pointer ${filterStatus === "todos" ? "bg-slate-800 text-white shadow-md" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
         >
-          Todos
+          Todos ({clientes.length})
         </button>
         <button 
-          onClick={() => setFilterStatus("con-credito-activo")}
-          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 pointer-events-auto cursor-pointer ${filterStatus === "con-credito-activo" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+          onClick={() => setFilterStatus("al-dia")}
+          className={`px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 pointer-events-auto cursor-pointer flex items-center gap-1.5 ${filterStatus === "al-dia" ? "bg-emerald-700 text-white shadow-md shadow-emerald-700/20" : "bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50"}`}
         >
-          Con crédito activo
+          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span>Al día ({countAlDia})</span>
         </button>
         <button 
-          onClick={() => setFilterStatus("sin-credito-activo")}
-          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 pointer-events-auto cursor-pointer ${filterStatus === "sin-credito-activo" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+          onClick={() => setFilterStatus("con-atraso")}
+          className={`px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 pointer-events-auto cursor-pointer flex items-center gap-1.5 ${filterStatus === "con-atraso" ? "bg-amber-600 text-white shadow-md shadow-amber-600/20" : "bg-white text-amber-700 border border-amber-200 hover:bg-amber-50"}`}
         >
-          Sin crédito activo
+          <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+          <span>Con atraso ({countAtraso})</span>
         </button>
         <button 
-          onClick={() => setFilterStatus("inactivos")}
-          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 pointer-events-auto cursor-pointer ${filterStatus === "inactivos" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}
+          onClick={() => setFilterStatus("en-mora")}
+          className={`px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 pointer-events-auto cursor-pointer flex items-center gap-1.5 ${filterStatus === "en-mora" ? "bg-red-700 text-white shadow-md shadow-red-700/20" : "bg-white text-red-700 border border-red-200 hover:bg-red-50"}`}
         >
-          Inactivos
+          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+          <span>En mora ({countMora})</span>
+        </button>
+        <button 
+          onClick={() => setFilterStatus("sin-deuda")}
+          className={`px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 pointer-events-auto cursor-pointer flex items-center gap-1.5 ${filterStatus === "sin-deuda" ? "bg-slate-600 text-white shadow-md" : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50"}`}
+        >
+          <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+          <span>Sin deuda ({countSinDeuda})</span>
         </button>
       </div>
 
-      <div className="bg-white border border-slate-200 p-4 rounded-2xl mb-6 flex gap-4 shadow-sm relative z-40 pointer-events-auto">
+      {/* Buscador */}
+      <div className="bg-white border border-slate-200 p-3 rounded-2xl mb-6 flex gap-4 shadow-sm relative z-40 pointer-events-auto">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input 
             type="text" 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar en el historial por nombre o DNI..." 
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-400"
+            placeholder="Buscar cliente por nombre o DNI..." 
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-slate-800 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-400"
           />
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm relative z-40 pointer-events-auto p-4">
-        <div className="overflow-x-auto">
-          <div className="min-w-[850px] flex flex-col gap-3 py-2">
-            
-            {/* Encabezado */}
-            <div className="flex text-slate-500 text-sm uppercase tracking-wider font-semibold px-8 mb-2">
-               <div className="w-[30%]">Cliente / DNI</div>
-               <div className="w-[20%]">Contacto</div>
-               <div className="w-[20%]">Negocio</div>
-               <div className="w-[15%]">Estado</div>
-               <div className="w-[15%] text-right pr-6">Acción</div>
-            </div>
+      {/* Grilla de Botones Tipo Píldora con Efecto Vidrio Esmerilado Gris */}
+      <div className="relative z-40 pointer-events-auto mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+          {filteredClientes.map((client) => {
+            const status = client.estadoFinanciero || (client.prestamos?.some((p: any) => p.estado === 'MORA') ? 'EN_MORA' : client.prestamos && client.prestamos.length > 0 ? 'AL_DIA' : 'SIN_DEUDA');
 
-            {/* Filas en forma de píldora azul */}
-            {filteredClientes.map((client) => {
-              const isMora = client.prestamos?.some((p: any) => p.estado === 'MORA');
-              const hasActive = client.prestamos && client.prestamos.length > 0;
-              const status = isMora ? 'Mora' : (hasActive ? 'Al día' : 'Cerrado');
+            let statusLabel = "Al día";
+            let statusBadge = "bg-emerald-500/10 text-emerald-800 border-emerald-500/30";
+            let statusDot = "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]";
 
-              return (
-                <div 
-                  key={client.id} 
-                  className="flex items-center bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-full px-6 py-2.5 shadow-md shadow-cyan-900/10 hover:shadow-lg hover:scale-[1.01] transition-all cursor-pointer group"
+            if (status === "CON_ATRASO") {
+              statusLabel = "Con atraso";
+              statusBadge = "bg-amber-500/10 text-amber-800 border-amber-500/30";
+              statusDot = "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)]";
+            } else if (status === "EN_MORA") {
+              statusLabel = "En mora";
+              statusBadge = "bg-red-500/10 text-red-800 border-red-500/30";
+              statusDot = "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.7)]";
+            } else if (status === "SIN_DEUDA") {
+              statusLabel = "Sin deuda";
+              statusBadge = "bg-slate-500/10 text-slate-600 border-slate-400/30";
+              statusDot = "bg-slate-400";
+            }
+
+            return (
+              <div key={client.id} className="relative group">
+                <Link 
+                  href={`/admin/clientes/${client.id}`}
+                  className="w-full flex flex-col items-center justify-center p-3.5 sm:p-4 rounded-3xl backdrop-blur-md bg-slate-200/50 hover:bg-slate-300/60 border border-slate-300/70 hover:border-slate-400 shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-95 transition-all duration-200 cursor-pointer text-center min-h-[92px]"
+                  title={`Ver ficha de ${client.nombre_apellido}`}
                 >
-                  {/* Cliente */}
-                  <div className="w-[30%] pr-4 border-r border-white/20">
-                    <p className="font-bold text-base drop-shadow-sm line-clamp-1">{client.nombre_apellido}</p>
-                    <p className="text-xs text-blue-100 font-mono mt-0.5">{client.dni}</p>
-                  </div>
+                  {/* Nombre del Cliente */}
+                  <p className="font-bold text-xs sm:text-sm text-slate-800 group-hover:text-slate-950 transition-colors line-clamp-1 w-full px-1 uppercase tracking-tight">
+                    {client.nombre_apellido}
+                  </p>
 
-                  {/* Contacto */}
-                  <div className="w-[20%] px-4 border-r border-white/20">
-                    <p className="font-semibold text-sm drop-shadow-sm line-clamp-1">{client.celular || 'Sin celular'}</p>
-                    <p className="text-xs text-blue-100 truncate mt-0.5" title={client.direccion_personal}>{client.direccion_personal || 'Sin dir. personal'}</p>
+                  {/* Estado en botón píldora pequeño debajo */}
+                  <div className="mt-2 flex items-center justify-center">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold border backdrop-blur-xs shadow-xs ${statusBadge}`}>
+                      <span className={`w-2 h-2 rounded-full ${statusDot}`} />
+                      <span>{statusLabel}</span>
+                    </span>
                   </div>
+                </Link>
 
-                  {/* Negocio */}
-                  <div className="w-[20%] px-4 border-r border-white/20">
-                    <p className="font-semibold text-sm drop-shadow-sm line-clamp-1">{client.nombre_negocio || 'Particular'}</p>
-                    <p className="text-xs text-blue-100 truncate mt-0.5" title={client.direccion_negocio}>{client.direccion_negocio || 'Sin dir. comercial'}</p>
-                  </div>
-
-                  {/* Estado */}
-                  <div className="w-[15%] px-4">
-                    <div className="flex flex-col gap-1 items-start">
-                       <p className="text-xs font-semibold flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full w-fit">
-                         <span className={`w-2 h-2 rounded-full ${status === 'Al día' ? 'bg-emerald-400' : status === 'Mora' ? 'bg-red-400 animate-pulse' : 'bg-slate-300'}`}></span>
-                         <span>{status}</span>
-                       </p>
-                    </div>
-                  </div>
-
-                  {/* Acciones */}
-                  <div className="w-[15%] pl-4 flex justify-end items-center gap-2 pr-1">
-                    <Link 
-                      href={`/admin/clientes/${client.id}`}
-                      className="px-4 py-1.5 bg-white text-blue-600 hover:bg-slate-50 hover:text-blue-700 rounded-full transition-colors font-bold text-xs shadow-sm flex items-center justify-center flex-1 max-w-[90px]"
-                    >
-                      VER
-                    </Link>
-                    <button 
-                      onClick={() => handleDelete(client.id, client.nombre_apellido)}
-                      className="p-1.5 text-blue-100 hover:text-red-300 hover:bg-white/10 rounded-full transition-colors"
-                      title="Eliminar Cliente"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-            
-            {filteredClientes.length === 0 && (
-              <div className="p-8 text-center text-slate-500 bg-slate-50 rounded-2xl w-full">
-                 No se encontraron clientes. Usa el buscador o registra uno nuevo.
+                {/* Botón discreto de eliminación protegido contra clics accidentales */}
+                <button 
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDelete(client.id, client.nombre_apellido);
+                  }}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                  title={`Eliminar cliente ${client.nombre_apellido}`}
+                >
+                  <Trash2 size={13} />
+                </button>
               </div>
-            )}
-          </div>
+            );
+          })}
         </div>
+
+        {filteredClientes.length === 0 && (
+          <div className="p-10 text-center text-slate-500 bg-white border border-slate-200 rounded-3xl shadow-sm w-full">
+             No se encontraron clientes con el criterio seleccionado. Usa el buscador o da de alta uno nuevo.
+          </div>
+        )}
       </div>
 
       {isModalOpen && (
